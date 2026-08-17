@@ -1,0 +1,170 @@
+/* ============================================================
+   COMPANION — News  (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.news-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+}
+
+.news-root-dark  { background: #0e0b08; }
+.news-root-light { background: #f5f0e8; }
+
+/* ── Top zone — light + companion statement ─────────────────── */
+.news-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 52px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Ambient Light Stage ────────────────────────────────────── */
+/* Compact — news is a calm daily ritual, not a dramatic moment */
+.al-stage-news {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.al-blob-news {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter;
+}
+
+/* ── Companion statement ────────────────────────────────────── */
+.news-statement {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 22px;
+  letter-spacing: 0.015em;
+  text-align: center;
+  margin: 2px 0 0;
+  animation: newsFadeUp 1.0s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.news-root-dark  .news-statement { color: #9a8060; }
+.news-root-light .news-statement { color: #9a7c50; }
+
+/* ── Headlines zone ─────────────────────────────────────────── */
+.news-headlines {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 128px;
+  gap: 0;
+  position: relative;
+  z-index: 2;
+  /* Pull the block slightly up to balance with top padding */
+  margin-top: -8px;
+  padding-bottom: 40px;
+}
+
+/* ── Single headline item ───────────────────────────────────── */
+.news-item {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 0;
+  position: relative;
+  animation: newsFadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Hair-thin rule between items — not above first, not below last */
+.news-item + .news-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.news-root-dark  .news-item + .news-item::before { background: #2a2016; }
+.news-root-light .news-item + .news-item::before { background: #ddd4c0; }
+
+/* Sequence number */
+.news-seq {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  margin-bottom: 10px;
+  opacity: 0.38;
+}
+
+.news-root-dark  .news-seq { color: #c8a870; }
+.news-root-light .news-seq { color: #9a7c50; }
+
+/* Headline text */
+.news-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 28px;
+  letter-spacing: 0.005em;
+  line-height: 1.32;
+  margin: 0;
+}
+
+.news-root-dark  .news-headline { color: #c8b890; }
+.news-root-light .news-headline { color: #4a3820; }
+
+/* First headline — slightly more present, currently being read */
+.news-item:first-child .news-headline {
+  font-size: 30px;
+  font-weight: 400;
+}
+.news-root-dark  .news-item:first-child .news-headline { color: #ddd0a8; }
+.news-root-light .news-item:first-child .news-headline { color: #3a2c18; }
+
+/* Items 2 & 3 — waiting, slightly quieter */
+.news-item:not(:first-child) { opacity: 0.72; }
+
+/* Active voice indicator — shown on first item while companion speaks */
+.news-item:first-child .news-seq::after {
+  content: '  ·  reading now';
+  font-style: italic;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+}
+
+/* Staggered reveal */
+.news-item:nth-child(1) { animation-delay: 0.20s; }
+.news-item:nth-child(2) { animation-delay: 0.36s; }
+.news-item:nth-child(3) { animation-delay: 0.52s; }
+
+@keyframes newsFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Override opacity for dimmed items so they animate to their target */
+.news-item:not(:first-child) {
+  animation-name: newsFadeUpDim;
+}
+@keyframes newsFadeUpDim {
+  from { opacity: 0;    transform: translateY(8px); }
+  to   { opacity: 0.72; transform: translateY(0); }
+}

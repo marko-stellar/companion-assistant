@@ -1,0 +1,107 @@
+Implement the COMPANION application foundation. Do not implement real AI conversation yet.
+
+GOAL
+Create a working modular-monolith application with a React/TypeScript frontend, Node.js/TypeScript backend, PostgreSQL persistence, basic routing, migrations, provider interfaces, logging and health checks.
+
+REQUIRED APPLICATION AREAS
+1. Tablet application route, e.g. /tablet
+2. Admin application route, e.g. /admin
+3. Backend API route namespace, e.g. /api
+4. Health endpoint, e.g. GET /api/health
+
+CREATE DOMAIN MODULE SKELETONS
+- users
+- companions
+- conversation
+- memory
+- reminders
+- appointments
+- proactivity
+- routine
+- photos
+- search
+- safety
+- notifications
+
+CREATE PROVIDER INTERFACES
+LLMProvider:
+- respond(...)
+- extractMemories(...)
+- classifySafety(...)
+- analyzeImage(...)
+
+SpeechProvider:
+- transcribe(...)
+- synthesize(...)
+
+SearchProvider:
+- searchWeb(...)
+- searchTrustedNews(...)
+
+NotificationProvider:
+- sendSMS(...)
+
+StorageProvider:
+- upload(...)
+- getSignedUrl(...)
+- delete(...)
+
+DATABASE
+Create migration infrastructure and the first schema for:
+- admins
+- users
+- companions
+- emergency_contacts
+- conversations
+- conversation_messages
+- memories
+- reminders
+- reminder_occurrences
+- appointments
+- dnd_periods
+- activity_events
+- routines
+- routine_deviations
+- photos
+- photo_memories
+- safety_events
+- news_sources
+- audit_logs
+Do not over-model. Fields can be expanded later, but use UUID primary keys, created_at/updated_at timestamps, user ownership where applicable, and indexes for user_id + time fields.
+
+USER TIME
+- user.timezone is required.
+- store timestamps in UTC.
+- scheduling logic must convert using user.timezone.
+
+SEED DATA
+Seed four companions:
+- Ana: female, warm and supportive
+- Mia: female, energetic and curious
+- Luka: male, calm and thoughtful
+- Ivan: male, friendly and humorous
+Store personality as structured configuration, including voice_id placeholder and system personality text.
+
+DEVELOPER EXPERIENCE
+- Create .env.example with placeholder provider settings.
+- Add structured server logging.
+- Add input validation library/schemas.
+- Add a simple error-handling middleware.
+- Add basic unit-test setup.
+- Add README sections: local run, migration commands, environment variables, architecture.
+
+UI
+For now, /tablet can show a simple "COMPANION setup in progress" screen.
+For now, /admin can show a simple "Admin setup in progress" screen.
+
+ACCEPTANCE CRITERIA
+- Project starts without runtime errors.
+- GET /api/health returns success.
+- Database migrations run successfully.
+- Seed creates the four companions.
+- Admin and tablet routes load.
+- No real provider API key is required yet.
+- All provider interfaces compile.
+- Unit-test command works.
+
+At the end, show changed files, migration names, commands to run, and manual verification steps.

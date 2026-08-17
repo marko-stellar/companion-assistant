@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/tablet/"
+title = "COMPANION Tablet"
+description = "The COMPANION tablet UI — a voice-first, touch-friendly interface for independent seniors. Shows the Ambient Light companion presence and enables voice conversation, reminders, photo sharing, and news. Landscape 1194×834px."
+version = "1.0.0"
+id = "artifacts/tablet"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/tablet/" ]
+localPort = 19583
+
+[services.development]
+run = "pnpm --filter @workspace/tablet run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tablet", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tablet/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19583"
+BASE_PATH = "/tablet/"

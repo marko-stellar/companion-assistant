@@ -1,1 +1,2 @@
 - [COMPANION motion & screenshot lessons](companion-motion-language.md) — transform-only staggering (opacity keyframes break screenshots), sine-breath motion rules, canvas row layout.
+- [COMPANION foundation](companion-foundation.md) — DB migrations done (19 tables, pgvector), 4 companions seeded, 3 tests pass, tablet+admin artifacts running; providers/domains are stubs; scheduler not wired to boot.

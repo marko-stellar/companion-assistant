@@ -1,0 +1,183 @@
+/* ============================================================
+   COMPANION — Design System
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.companion-root {
+  width: 1194px;
+  height: 834px;
+  background: #0e0b08;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* ── Greeting ──────────────────────────────────────────────── */
+.greeting-zone {
+  position: relative;
+  z-index: 2;
+  padding-top: 46px;
+  text-align: center;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.greeting-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 46px;
+  letter-spacing: 0.025em;
+  color: #ede3d0;
+  margin: 0;
+}
+
+/* ── Light Zone ────────────────────────────────────────────── */
+.light-zone {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
+
+/* ── Ambient Light Stage ────────────────────────────────────── */
+/* The stage is a fixed-size region; blobs are centered inside it
+   via flex. overflow:visible lets the blur halos escape the box
+   without affecting document layout. */
+.al-stage {
+  position: relative;
+  width: 400px;
+  height: 380px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+/* All blobs: absolutely centered, blur-rendered glow */
+.al-blob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter, transform;
+  /* centering handled by JS via translate(-50%,-50%) is fragile;
+     instead use negative margins derived from explicit pixel sizes.
+     We rely on the JS setting width/height and use this margin trick: */
+  translate: -50% -50%;
+}
+
+/* ── Question ──────────────────────────────────────────────── */
+.companion-question {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 32px;
+  letter-spacing: 0.01em;
+  color: #c4b490;
+  margin: 16px 0 0 0;
+  text-align: center;
+  opacity: 0.85;
+  position: relative;
+  z-index: 3;
+}
+
+/* ── Bottom Zone ─────────────────────────────────────────────── */
+.bottom-zone {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 68px 50px 68px;
+  flex-shrink: 0;
+}
+
+/* ── Schedule ────────────────────────────────────────────────── */
+.schedule-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-heading {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #5a4e3a;
+  margin: 0 0 2px 0;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+}
+
+.schedule-time {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 14px;
+  color: #5a4e3a;
+  letter-spacing: 0.06em;
+  min-width: 38px;
+}
+
+.schedule-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 25px;
+  color: #b0a07a;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+/* ── Talk Button ─────────────────────────────────────────────── */
+.talk-button {
+  border: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 60px;
+  padding: 24px 76px;
+  background: #120e08;
+  box-shadow:
+    0 0 0 1px #a06828,
+    0 0 32px 8px #a0682822,
+    inset 0 1px 0 #ffffff08;
+  transition: box-shadow 0.35s ease, background 0.35s ease;
+}
+
+.talk-button:hover {
+  background: #1a1209;
+  box-shadow:
+    0 0 0 1px #c4823a,
+    0 0 48px 14px #c4823a36,
+    inset 0 1px 0 #ffffff10;
+}
+
+.talk-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 0.32em;
+  color: #b07a3a;
+  text-transform: uppercase;
+  display: block;
+  white-space: nowrap;
+}

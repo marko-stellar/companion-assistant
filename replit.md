@@ -34,7 +34,12 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+### COMPANION design philosophy (final instruction, binding for all COMPANION work)
+- COMPANION is NOT ChatGPT, Siri, Alexa, or a dashboard. It is a beautiful object in the user's home.
+- If adding a UI element makes the interface busier, remove it. Simplicity over features, always.
+- Every screen must create emotional comfort and companionship.
+- Established language: Ambient Light (layered blur blobs, sine-based breathing), Cormorant Garamond italic serif + Inter, dark `#0e0b08` / light `#f5f0e8`, no chat bubbles, no timestamps, no red/urgency cues, no bouncing motion.
+- All screens delivered as matched dark + light pairs, side by side on the canvas (see `.agents/memory/companion-motion-language.md` for layout and motion details).
 
 ## Gotchas
 

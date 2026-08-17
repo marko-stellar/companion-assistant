@@ -1,0 +1,198 @@
+/* ============================================================
+   COMPANION — Settings  (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.settings-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.settings-root-dark  { background: #0e0b08; }
+.settings-root-light { background: #f5f0e8; }
+
+/* ── Header ─────────────────────────────────────────────────── */
+.settings-header {
+  display: flex;
+  align-items: center;
+  padding: 44px 64px 32px;
+  gap: 24px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Ambient Light — tiny, header companion ─────────────────── */
+.al-stage-settings {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.al-blob-settings {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter;
+}
+
+/* ── Title ──────────────────────────────────────────────────── */
+.settings-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 28px;
+  letter-spacing: 0.01em;
+  margin: 0;
+  flex: 1;
+}
+
+.settings-root-dark  .settings-title { color: #9a8060; }
+.settings-root-light .settings-title { color: #9a7c50; }
+
+/* ── Cards grid ─────────────────────────────────────────────── */
+.settings-grid {
+  flex: 1;
+  display: grid;
+  /* 3 cols top row, spanned as 2 wide on bottom */
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+  padding: 0 64px 52px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Emergency Contact spans 2 columns — it's the most important */
+.settings-card-emergency {
+  grid-column: span 2;
+}
+
+/* ── Single card ────────────────────────────────────────────── */
+.settings-card {
+  border-radius: 20px;
+  padding: 32px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.3s ease;
+}
+
+.settings-card:active {
+  transform: scale(0.985);
+}
+
+/* Dark cards */
+.settings-root-dark .settings-card {
+  background: #161008;
+  box-shadow: 0 0 0 1px #2a2014;
+}
+.settings-root-dark .settings-card:hover {
+  background: #1c140a;
+  box-shadow: 0 0 0 1px #3a3020, 0 8px 32px #00000030;
+}
+
+/* Light cards */
+.settings-root-light .settings-card {
+  background: #eeead8;
+  box-shadow: 0 0 0 1px #ddd4be, 0 2px 12px #0000000a;
+}
+.settings-root-light .settings-card:hover {
+  background: #e8e2d0;
+  box-shadow: 0 0 0 1px #ccc4ae, 0 4px 20px #00000012;
+}
+
+/* ── Card top — label + tap hint ────────────────────────────── */
+.settings-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Label */
+.settings-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  margin: 0;
+}
+
+.settings-root-dark  .settings-label { color: #5a4830; }
+.settings-root-light .settings-label { color: #a08860; }
+
+/* Tap dot — tiny warm circle, not a chevron */
+.settings-tap-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.settings-root-dark  .settings-tap-dot { background: #3a2e1a; }
+.settings-root-light .settings-tap-dot { background: #c0b090; }
+
+/* ── Card value — the actual setting ───────────────────────── */
+.settings-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 32px;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.settings-root-dark  .settings-value { color: #d4c4a0; }
+.settings-root-light .settings-value { color: #3a2c18; }
+
+/* Sub-value — quiet note below the main value */
+.settings-subvalue {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  margin: 6px 0 0;
+  display: block;
+  opacity: 0.5;
+}
+
+.settings-root-dark  .settings-subvalue { color: #c8a870; }
+.settings-root-light .settings-subvalue { color: #9a7c50; }
+
+/* Emergency card — slightly elevated visually */
+.settings-root-dark .settings-card-emergency {
+  background: #190e06;
+  box-shadow: 0 0 0 1px #c8905020, 0 0 40px 8px #c8905010;
+}
+.settings-root-light .settings-card-emergency {
+  background: #e8e0cc;
+  box-shadow: 0 0 0 1px #c0a880, 0 4px 24px #0000001a;
+}
+
+.settings-card-emergency .settings-value {
+  font-size: 28px;
+}
+.settings-root-dark  .settings-card-emergency .settings-tap-dot { background: #c8905040; }
+.settings-root-light .settings-card-emergency .settings-tap-dot { background: #b09050; }
+
+/* DND — show status visually */
+.settings-dnd-off  .settings-value { opacity: 0.45; }
+.settings-dnd-on   .settings-value { opacity: 1.0; }

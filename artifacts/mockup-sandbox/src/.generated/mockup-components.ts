@@ -13,6 +13,8 @@ export const modules: ModuleMap = {
   "./components/mockups/companion/RemindLight.tsx": () => import("../components/mockups/companion/RemindLight.tsx"),
   "./components/mockups/companion/SchedDark.tsx": () => import("../components/mockups/companion/SchedDark.tsx"),
   "./components/mockups/companion/SchedLight.tsx": () => import("../components/mockups/companion/SchedLight.tsx"),
+  "./components/mockups/companion/SettingsDark.tsx": () => import("../components/mockups/companion/SettingsDark.tsx"),
+  "./components/mockups/companion/SettingsLight.tsx": () => import("../components/mockups/companion/SettingsLight.tsx"),
   "./components/mockups/companion/SpeakDark.tsx": () => import("../components/mockups/companion/SpeakDark.tsx"),
   "./components/mockups/companion/SpeakLight.tsx": () => import("../components/mockups/companion/SpeakLight.tsx")
 };

@@ -75,7 +75,7 @@ export function PhotoLight() {
       {/* Full-bleed family photo */}
       <img
         className="photo-image"
-        src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1400&q=85&auto=format&fit=crop"
+        src="https://images.unsplash.com/photo-1609220136736-443140cffec6?w=1400&q=85&auto=format&fit=crop"
         alt="Family gathering"
         draggable={false}
       />

@@ -1,0 +1,208 @@
+/* ============================================================
+   COMPANION — Today's Schedule  (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.sched-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.sched-root-dark  { background: #0e0b08; }
+.sched-root-light { background: #f5f0e8; }
+
+/* ── Left: ambient light column ─────────────────────────────── */
+.sched-light-col {
+  width: 440px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Right: events column ───────────────────────────────────── */
+.sched-events-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 64px 40px 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Ambient Light Stage ────────────────────────────────────── */
+/* Smaller — sharing space with content */
+.al-stage-sched {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.al-blob-sched {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter;
+}
+
+/* ── Header: "Today" ────────────────────────────────────────── */
+.sched-header {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 16px;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  margin: 0 0 40px 0;
+  opacity: 0.45;
+  animation: schedFadeIn 1.0s ease both;
+}
+
+.sched-root-dark  .sched-header { color: #c8a870; }
+.sched-root-light .sched-header { color: #9a7c50; }
+
+/* ── Vertical thread ────────────────────────────────────────── */
+/* The spine that connects moments — ultra-thin, warm */
+.sched-thread {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sched-thread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+}
+
+.sched-root-dark  .sched-thread::before { background: linear-gradient(to bottom, transparent, #5a4020 12%, #5a4020 88%, transparent); }
+.sched-root-light .sched-thread::before { background: linear-gradient(to bottom, transparent, #c8a870 12%, #c8a870 88%, transparent); }
+
+/* ── Single event row ───────────────────────────────────────── */
+.sched-event {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 13px 0 13px 32px;
+  position: relative;
+  transition: opacity 0.4s ease;
+  /* Transform-only animation — opacity stays at class-defined value,
+     never hidden before the delay fires */
+  animation: schedSlideIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The dot on the thread */
+.sched-dot {
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sched-root-dark  .sched-dot { background: #3a2c18; border: 1px solid #6a5030; }
+.sched-root-light .sched-dot { background: #e0d0b8; border: 1px solid #b09070; }
+
+/* NOW dot — glowing */
+.sched-event-now .sched-dot {
+  width: 11px;
+  height: 11px;
+  left: -5px;
+}
+.sched-root-dark  .sched-event-now .sched-dot {
+  background: #c89050;
+  border-color: #d4a060;
+  box-shadow: 0 0 10px 4px #c8905050;
+}
+.sched-root-light .sched-event-now .sched-dot {
+  background: #c08040;
+  border-color: #d09050;
+  box-shadow: 0 0 10px 4px #c0804038;
+}
+
+/* Time label */
+.sched-time {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  width: 64px;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.sched-root-dark  .sched-time { color: #c8a870; }
+.sched-root-light .sched-time { color: #9a7c50; }
+
+.sched-event-now .sched-time { opacity: 0.75; }
+
+/* Event name */
+.sched-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 26px;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  flex: 1;
+}
+
+.sched-root-dark  .sched-name { color: #a89070; }
+.sched-root-light .sched-name { color: #6a5030; }
+
+/* PAST: dimmed */
+.sched-event-past { opacity: 0.35; }
+.sched-event-past .sched-name { font-size: 23px; }
+
+/* NOW: prominent */
+.sched-event-now .sched-name {
+  font-size: 32px;
+  font-weight: 400;
+}
+.sched-root-dark  .sched-event-now .sched-name { color: #d4b080; }
+.sched-root-light .sched-event-now .sched-name { color: #4a3418; }
+
+/* FUTURE: standard but slightly quieter */
+.sched-event-future { opacity: 0.70; }
+
+/* Staggered slide-in — transform only, opacity never hidden */
+.sched-event:nth-child(1) { animation-delay: 0.08s; }
+.sched-event:nth-child(2) { animation-delay: 0.18s; }
+.sched-event:nth-child(3) { animation-delay: 0.28s; }
+.sched-event:nth-child(4) { animation-delay: 0.38s; }
+.sched-event:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes schedSlideIn {
+  from { transform: translateX(12px); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes schedFadeIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

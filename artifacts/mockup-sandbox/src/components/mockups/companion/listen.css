@@ -1,0 +1,99 @@
+/* ============================================================
+   COMPANION — Listening Screen Styles (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.listen-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.listen-root-dark  { background: #0e0b08; }
+.listen-root-light { background: #f5f0e8; }
+
+/* ── Center Zone — light fills the whole screen ──────────────── */
+.listen-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  gap: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Ambient Light Stage ─────────────────────────────────────── */
+/* Larger than home — light has expanded in listening state */
+.al-stage-listen {
+  position: relative;
+  width: 480px;
+  height: 480px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.al-blob-listen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter, transform;
+}
+
+/* ── Wave Rings ──────────────────────────────────────────────── */
+/* A thin circle that expands outward and fades — like a calm ripple.
+   Positioned absolutely at the center of the stage, scaled via JS. */
+.wave-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Base size matches the light core — rings emanate from there */
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  /* transform set inline by JS: translate(-50%,-50%) scale(n) */
+  transform-origin: center center;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* ── "I'm listening…" ────────────────────────────────────────── */
+.listening-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  /* Slightly larger than home question — it's a statement, not a query */
+  font-size: 38px;
+  letter-spacing: 0.015em;
+  margin: 28px 0 0 0;
+  text-align: center;
+  position: relative;
+  z-index: 3;
+
+  /* Gentle fade-in feel via subtle animation */
+  animation: textFadeIn 1.2s ease forwards;
+}
+
+.listening-text-dark  { color: #d4c4a0; opacity: 0.90; }
+.listening-text-light { color: #6a5438; opacity: 0.88; }
+
+@keyframes textFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

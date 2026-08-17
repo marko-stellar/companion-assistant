@@ -1,0 +1,56 @@
+You are the senior engineer implementing the COMPANION MVP. Before writing feature code, read this entire instruction and inspect the current repository.
+
+PRODUCT
+COMPANION is a tablet-first, voice-first AI digital companion for independent seniors aged approximately 65-75 who live alone. The first MVP supports Croatian and English. The same companion persists over time and remembers the user, proactively talks to the user, manages reminders and appointments, tracks interaction-based routines, discusses uploaded photos, can retrieve current web/news information, and sends a contextual SMS to a configured emergency contact when conversation indicates a potentially urgent situation.
+
+MVP BOUNDARIES
+- Not a medical device.
+- No diagnosis or clinical treatment.
+- No family/caregiver portal.
+- No external calendar integration.
+- No phone/video calling.
+- No continuous camera monitoring.
+- No wearable integration.
+- Internet connection is required.
+- One senior remains signed into the assigned tablet after setup.
+- One simple admin role uses email/password authentication.
+
+ARCHITECTURE RULES
+1. Use a modular monolith, not microservices.
+2. Use TypeScript end-to-end where practical.
+3. Tablet UI and admin UI are separate route groups but share one backend.
+4. PostgreSQL is the source of truth.
+5. All external providers must be behind interfaces/adapters:
+   - LLMProvider
+   - SpeechProvider
+   - SearchProvider
+   - NotificationProvider
+   - StorageProvider
+6. Never call AI, speech, search or SMS providers directly from React components.
+7. Business rules belong in code/services, not only in prompts.
+8. Use database migrations. Do not reset the database destructively after development begins.
+9. Store timestamps in UTC and store user timezone separately.
+10. Conversation transcripts and structured memories are separate.
+11. Safety classification is independent of the main conversation-generation call.
+12. Routine deviation alone must never send an emergency SMS.
+13. API keys must only exist server-side in environment variables/Replit Secrets.
+14. Uploaded photos must use persistent object storage, not the deployment filesystem.
+15. Keep the codebase portable so we can later continue development with Claude Code or a conventional IDE.
+
+WORKING METHOD
+- Before each implementation task, inspect existing code and briefly state the plan.
+- Do not rewrite unrelated working modules.
+- After each task, run the app, run relevant tests, and provide:
+  a) changed files,
+  b) database migrations,
+  c) required environment variables,
+  d) manual test steps,
+  e) known limitations.
+- Prefer a small maintainable implementation over speculative abstractions.
+
+Do not build all product features now. For this prompt, only:
+1. confirm that you understand the architecture and MVP boundaries,
+2. inspect the repository,
+3. propose the exact project structure you will use,
+4. identify any conflict between this requested architecture and the current Replit project,
+5. wait for the next implementation prompt before making major feature changes.

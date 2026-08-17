@@ -74,7 +74,6 @@ function AmbientLightPhoto() {
 export function PhotoDark() {
   return (
     <div className="photo-root photo-root-dark">
-
       {/* Full-bleed family photo */}
       <img
         className="photo-image"
@@ -82,20 +81,16 @@ export function PhotoDark() {
         alt="Family gathering"
         draggable={false}
       />
-
       {/* Top vignette — anchors photo in dark world */}
       <div className="photo-vignette-top" />
-
       {/* Bottom gradient — photo bleeds into companion's space */}
       <div className="photo-gradient" />
-
       {/* Companion: light + question */}
       <div className="photo-companion">
         <AmbientLightPhoto />
-        <p className="photo-question">Who is this with you?</p>
+        <p className="photo-question">Who is this with the kids?</p>
         <span className="photo-hint">tap to tell me</span>
       </div>
-
     </div>
   );
 }

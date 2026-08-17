@@ -121,26 +121,26 @@
 /* Headline text */
 .news-headline {
   font-family: 'Cormorant Garamond', serif;
-  font-weight: 300;
-  font-size: 28px;
+  font-weight: 400;
+  font-size: 30px;
   letter-spacing: 0.005em;
-  line-height: 1.32;
+  line-height: 1.35;
   margin: 0;
 }
 
-.news-root-dark  .news-headline { color: #c8b890; }
-.news-root-light .news-headline { color: #4a3820; }
+.news-root-dark  .news-headline { color: #d8c8a0; }
+.news-root-light .news-headline { color: #3e2e18; }
 
 /* First headline — slightly more present, currently being read */
 .news-item:first-child .news-headline {
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 400;
 }
-.news-root-dark  .news-item:first-child .news-headline { color: #ddd0a8; }
-.news-root-light .news-item:first-child .news-headline { color: #3a2c18; }
+.news-root-dark  .news-item:first-child .news-headline { color: #e8d8b0; }
+.news-root-light .news-item:first-child .news-headline { color: #2e2010; }
 
 /* Items 2 & 3 — waiting, slightly quieter */
-.news-item:not(:first-child) { opacity: 0.72; }
+.news-item:not(:first-child) { opacity: 0.88; }
 
 /* Active voice indicator — shown on first item while companion speaks */
 .news-item:first-child .news-seq::after {
@@ -150,21 +150,14 @@
   opacity: 0.75;
 }
 
-/* Staggered reveal */
-.news-item:nth-child(1) { animation-delay: 0.20s; }
-.news-item:nth-child(2) { animation-delay: 0.36s; }
-.news-item:nth-child(3) { animation-delay: 0.52s; }
+/* Staggered slide-in — transform only so opacity is always at class value */
+.news-item:nth-child(1) { animation-delay: 0.10s; }
+.news-item:nth-child(2) { animation-delay: 0.20s; }
+.news-item:nth-child(3) { animation-delay: 0.30s; }
 
-@keyframes newsFadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Override opacity for dimmed items so they animate to their target */
-.news-item:not(:first-child) {
-  animation-name: newsFadeUpDim;
-}
-@keyframes newsFadeUpDim {
-  from { opacity: 0;    transform: translateY(8px); }
-  to   { opacity: 0.72; transform: translateY(0); }
+/* Transform-only: items are visible at their class opacity from the start */
+.news-item { animation-name: newsSlideUp; }
+@keyframes newsSlideUp {
+  from { transform: translateY(10px); }
+  to   { transform: translateY(0); }
 }

@@ -51,6 +51,20 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 6. Minute-level reminder/proactivity checks via an application-level scheduler inside the always-on backend. Scheduled Deployments reserved for later independent jobs (cleanup, reports).
 7. A single health endpoint and basic structured logs from the beginning.
 
+### COMPANION architecture constraints (binding)
+- **Modular monolith.** No microservices.
+- **One backend, two route groups.** Tablet and admin experiences are separate route groups/components sharing a single backend.
+- **No provider calls from React.** All AI, speech, search, and SMS calls go through server-side provider interfaces — never from browser components.
+- **Provider interfaces.** Every external integration (AI, TTS, SMS, search) is wrapped behind a provider interface so implementations are swappable.
+- **Domain services own business logic.** Business logic belongs in domain services, not in system prompts.
+- **UTC storage + user timezone.** All timestamps stored in UTC; a user timezone field drives display and scheduling.
+- **Migrations only.** All database changes use migrations. No destructive schema reset after the first migration unless explicitly approved.
+- **Separate storage for transcripts vs. structured memory.** Conversation transcript storage and structured memory storage are distinct.
+- **Safety classification is independent.** Safety classification runs separately from normal conversational response generation.
+- **No emergency SMS on routine deviation alone.** Routine deviation alone never triggers an emergency SMS in the MVP.
+- **No medical diagnosis.** The product does not diagnose, prescribe, or interpret medical results.
+- **No camera monitoring in the MVP.**
+
 ## Gotchas
 
 _Populate as you build — sharp edges, "always run X before Y" rules._

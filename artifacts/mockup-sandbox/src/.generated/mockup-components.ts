@@ -5,6 +5,8 @@ export const modules: ModuleMap = {
   "./components/mockups/companion/HomeScreenLight.tsx": () => import("../components/mockups/companion/HomeScreenLight.tsx"),
   "./components/mockups/companion/ListenDark.tsx": () => import("../components/mockups/companion/ListenDark.tsx"),
   "./components/mockups/companion/ListenLight.tsx": () => import("../components/mockups/companion/ListenLight.tsx"),
+  "./components/mockups/companion/RemindDark.tsx": () => import("../components/mockups/companion/RemindDark.tsx"),
+  "./components/mockups/companion/RemindLight.tsx": () => import("../components/mockups/companion/RemindLight.tsx"),
   "./components/mockups/companion/SpeakDark.tsx": () => import("../components/mockups/companion/SpeakDark.tsx"),
   "./components/mockups/companion/SpeakLight.tsx": () => import("../components/mockups/companion/SpeakLight.tsx")
 };

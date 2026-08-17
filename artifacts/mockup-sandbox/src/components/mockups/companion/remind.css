@@ -1,0 +1,193 @@
+/* ============================================================
+   COMPANION — Reminder Screen Styles (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.remind-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+}
+
+.remind-root-dark  { background: #0e0b08; }
+.remind-root-light { background: #f5f0e8; }
+
+/* ── Layout ────────────────────────────────────────────────── */
+/* Light sits in upper portion; message + buttons in lower half */
+.remind-light-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  /* Push light slightly up */
+  margin-top: 32px;
+}
+
+.remind-lower {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  padding: 0 100px 56px;
+  flex-shrink: 0;
+}
+
+/* ── Ambient Light Stage ────────────────────────────────────── */
+/* Slightly smaller than home — intimate, not alarming */
+.al-stage-remind {
+  position: relative;
+  width: 360px;
+  height: 360px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.al-blob-remind {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter, transform;
+}
+
+/* ── Message ─────────────────────────────────────────────────── */
+.remind-message {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 40px;
+  letter-spacing: 0.015em;
+  line-height: 1.25;
+  text-align: center;
+  margin: 0 0 48px 0;
+  animation: remindFadeUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.remind-root-dark  .remind-message { color: #ddd0b0; }
+.remind-root-light .remind-message { color: #4a3820; }
+
+@keyframes remindFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.remind-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  width: 100%;
+  justify-content: center;
+  animation: remindFadeUp 1.4s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Base button — very generous touch target for seniors */
+.remind-btn {
+  border: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 60px;
+  padding: 26px 0;
+  /* Equal width side-by-side */
+  flex: 1;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.3s ease, background 0.3s ease, transform 0.15s ease;
+}
+
+.remind-btn:active {
+  transform: scale(0.98);
+}
+
+.remind-btn-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  display: block;
+  white-space: nowrap;
+}
+
+/* ── "I already took it" — primary affirm action ─────────────── */
+/* Warm, encouraging, full-fill — the positive action */
+
+/* Dark */
+.remind-root-dark .remind-btn-took {
+  background: linear-gradient(155deg, #2a1c0e 0%, #1e1409 100%);
+  box-shadow:
+    0 0 0 1.5px #c89050bb,
+    0 0 40px 10px #c8905028,
+    inset 0 1px 0 #ffffff0c;
+}
+.remind-root-dark .remind-btn-took:hover {
+  box-shadow:
+    0 0 0 1.5px #d4a060dd,
+    0 0 60px 18px #d4a06038,
+    inset 0 1px 0 #ffffff14;
+}
+.remind-root-dark .remind-btn-took .remind-btn-label {
+  color: #d4a060;
+}
+
+/* Light */
+.remind-root-light .remind-btn-took {
+  background: #2e2016;
+  box-shadow:
+    0 2px 32px 0 #2e201620;
+}
+.remind-root-light .remind-btn-took:hover {
+  background: #3d2b1e;
+  box-shadow: 0 4px 40px 0 #2e201630;
+}
+.remind-root-light .remind-btn-took .remind-btn-label {
+  color: #e8d8bc;
+}
+
+/* ── "Not yet" — secondary gentle action ─────────────────────── */
+/* Unobtrusive, no urgency — just an honest answer */
+
+/* Dark */
+.remind-root-dark .remind-btn-notyet {
+  background: transparent;
+  box-shadow: 0 0 0 1px #3e3022;
+}
+.remind-root-dark .remind-btn-notyet:hover {
+  background: #1c1408;
+  box-shadow: 0 0 0 1px #5a4530;
+}
+.remind-root-dark .remind-btn-notyet .remind-btn-label {
+  color: #8a7456;
+}
+
+/* Light */
+.remind-root-light .remind-btn-notyet {
+  background: transparent;
+  box-shadow: 0 0 0 1px #c8b898;
+}
+.remind-root-light .remind-btn-notyet:hover {
+  background: #ede6d8;
+  box-shadow: 0 0 0 1px #b0a080;
+}
+.remind-root-light .remind-btn-notyet .remind-btn-label {
+  color: #9a8460;
+}

@@ -38,7 +38,7 @@ export function LogoDark() {
           <Glow />
         </div>
         <p className="logo-wordmark">
-          companion <em>ai</em>
+          companion
         </p>
       </div>
 
@@ -58,7 +58,7 @@ export function LogoDark() {
               <span className="logo-ring" />
               <Glow scale={0.36} />
             </div>
-            <p className="logo-wordmark">companion <em>ai</em></p>
+            <p className="logo-wordmark">companion</p>
           </div>
           <span className="logo-variant-label">horizontal lockup</span>
         </div>

@@ -1,0 +1,107 @@
+/* ============================================================
+   COMPANION — Speaking Screen Styles (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.speak-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.speak-root-dark  { background: #0e0b08; }
+.speak-root-light { background: #f5f0e8; }
+
+/* ── Center Stage ─────────────────────────────────────────── */
+.speak-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+  /* Pull slightly above true center so speech text sits
+     comfortably in the lower half */
+  padding-bottom: 40px;
+}
+
+/* ── Ambient Light Stage ─────────────────────────────────── */
+/* Slightly smaller than listening — the light has settled
+   into a calm conversational presence */
+.al-stage-speak {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.al-blob-speak {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter, transform;
+}
+
+/* ── Speech Text ─────────────────────────────────────────── */
+/* The companion's words — not a chat bubble, not a notification.
+   Just text, breathing in the space below the light. */
+.speak-text-block {
+  margin: 36px 0 0 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 3;
+  animation: speakFadeUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes speakFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Greeting line — slightly smaller, a warm opener */
+.speak-line-greeting {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 34px;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* Question line — the main line, slightly more presence */
+.speak-line-question {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 38px;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* Dark theme text colours */
+.speak-root-dark .speak-line-greeting  { color: #c8b898; opacity: 0.80; }
+.speak-root-dark .speak-line-question  { color: #ddd0b0; opacity: 0.92; }
+
+/* Light theme text colours */
+.speak-root-light .speak-line-greeting { color: #8a7256; opacity: 0.82; }
+.speak-root-light .speak-line-question { color: #5a4530; opacity: 0.90; }

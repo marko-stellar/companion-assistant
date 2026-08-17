@@ -1,0 +1,153 @@
+/* ============================================================
+   COMPANION — Photo Conversation  (Dark + Light)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=Inter:wght@300&display=swap');
+
+/* ── Root ──────────────────────────────────────────────────── */
+.photo-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Photo — full bleed, dominant ──────────────────────────── */
+.photo-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  /* Subtle warm tone shift */
+  filter: saturate(0.88) sepia(0.12) brightness(0.96);
+  z-index: 0;
+}
+
+/* ── Bottom gradient — photo bleeds into companion world ───── */
+/* Dark: photo fades into the deep near-black */
+.photo-root-dark .photo-gradient {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 420px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #0e0b0800 0%,
+    #0e0b0840 28%,
+    #0e0b08c0 58%,
+    #0e0b08  80%
+  );
+  z-index: 1;
+}
+
+/* Light: photo fades into warm linen */
+.photo-root-light .photo-gradient {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 420px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #f5f0e800 0%,
+    #f5f0e840 28%,
+    #f5f0e8c0 58%,
+    #f5f0e8  80%
+  );
+  z-index: 1;
+}
+
+/* Dark: very soft vignette at top (grounding) */
+.photo-root-dark .photo-vignette-top {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 180px;
+  background: linear-gradient(to bottom, #0e0b0855, transparent);
+  z-index: 1;
+}
+
+/* Light: very soft vignette at top */
+.photo-root-light .photo-vignette-top {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 180px;
+  background: linear-gradient(to bottom, #f5f0e840, transparent);
+  z-index: 1;
+}
+
+/* ── Companion area — bottom section ────────────────────────── */
+/* Light + question live here, over the gradient */
+.photo-companion {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 44px;
+  z-index: 2;
+}
+
+/* ── Ambient Light Stage ────────────────────────────────────── */
+/* Small, intimate — the companion looking up at the memory */
+.al-stage-photo {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.al-blob-photo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform-origin: center center;
+  will-change: width, height, opacity, filter;
+}
+
+/* ── Question text ──────────────────────────────────────────── */
+.photo-question {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 36px;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  text-align: center;
+  margin: 0;
+  /* Fade up gently */
+  animation: photoFadeUp 1.6s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.photo-root-dark  .photo-question { color: #d4c4a0; }
+.photo-root-light .photo-question { color: #3e2e18; }
+
+/* ── Listening hint — hair-thin, no pressure ────────────────── */
+/* A single muted line below the question — "tap to tell me" */
+.photo-hint {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 12px;
+  letter-spacing: 0.20em;
+  text-transform: lowercase;
+  margin: 18px 0 0;
+  opacity: 0;
+  /* Fades in later, quietly */
+  animation: photoFadeUp 1.2s 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.photo-root-dark  .photo-hint { color: #6a5838; }
+.photo-root-light .photo-hint { color: #b0946a; }
+
+@keyframes photoFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

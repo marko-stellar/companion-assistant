@@ -1,16 +1,22 @@
-import { Router } from "express";
+import { Router, type IRouter } from "express";
+import authRouter from "./auth";
+import usersRouter from "./users";
+import companionsRouter from "./companions";
 
 /**
  * Admin API route group — /api/admin/*
- * All routes here serve the admin React app.
- * Authentication: email/password session.
- * TODO: add admin auth middleware when auth is implemented.
+ * All routes except /auth/login require a valid admin session cookie.
+ * Session is set by POST /api/admin/auth/login.
  */
-const router = Router();
+const router: IRouter = Router();
 
 // Ping — sanity check for admin API connectivity
 router.get("/ping", (_req, res) => {
   res.json({ ok: true, area: "admin" });
 });
+
+router.use(authRouter);
+router.use(companionsRouter); // also handles /dashboard
+router.use(usersRouter);
 
 export default router;

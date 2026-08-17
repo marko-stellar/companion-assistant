@@ -1,49 +1,53 @@
 ---
 name: COMPANION foundation
-description: Database, migrations, seed, providers, domains, tests, and artifact setup for the COMPANION project foundation build.
+description: DB schema, seeded data, working artifacts, and key backend decisions for the COMPANION project
 ---
 
-## What was built
+## Database (lib/db)
+- 19 table schema files in `lib/db/src/schema/`
+- pgvector extension enabled, custom `vector` column type in `lib/db/src/types/vector.ts`
+- drizzle.config.ts uses **relative paths** (`"./migrations"`, `"./src/schema/index.ts"`) — not `path.join(__dirname, ...)` which causes a double-slash bug in drizzle-kit
+- 4 companions seeded: Ana (warm/supportive), Mia (energetic/curious), Luka (calm/thoughtful), Ivan (friendly/humorous)
 
-**Database (lib/db)**
-- drizzle.config.ts uses `out: "./migrations"` with timestamp prefix — run `pnpm --filter @workspace/db run generate` then `migrate`
-- 19 tables migrated; pgvector extension must be enabled first (`CREATE EXTENSION IF NOT EXISTS vector`)
-- 4 seed companions (Ana, Mia, Luka, Ivan) via `pnpm --filter @workspace/db run seed` — idempotent
+## Session table
+The `admin_sessions` table must be pre-created manually (or via migration) before starting the server. `connect-pg-simple@10` with `createTableIfMissing: true` reads a `table.sql` from its own package directory using `__dirname`, but esbuild replaces `__dirname` with the dist output dir — so the file is never found. Fix: create table via `psql $DATABASE_URL` (or Drizzle migration), set `createTableIfMissing: false` (or omit the option).
 
-**API server (artifacts/api-server)**
-- Routes mounted: `/api/healthz`, `/api/tablet/*`, `/api/admin/*`
-- `errorHandler` middleware registered after all routes in `app.ts`
-- Tests: `vitest` + `supertest` — run `pnpm --filter @workspace/api-server run test`
-- vitest.config.ts uses Node environment
+Schema:
+```sql
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  sid varchar NOT NULL COLLATE "default",
+  sess json NOT NULL,
+  expire timestamp(6) NOT NULL,
+  CONSTRAINT admin_sessions_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE
+);
+CREATE INDEX IF NOT EXISTS IDX_admin_sessions_expire ON admin_sessions (expire);
+```
 
-**Artifacts**
-- `artifacts/tablet` (preview: `/tablet/`) — always-dark COMPANION UI, Cormorant Garamond + Inter
-- `artifacts/admin` (preview: `/admin/`) — warm linen light-mode admin panel
-- Both have CSS tokens patched to COMPANION palette (dark and light variants)
-- Both index.html have Cormorant Garamond loaded from Google Fonts
+## API server (artifacts/api-server)
+- Express 5, esbuild ESM bundle
+- Session auth: express-session + connect-pg-simple, table `admin_sessions`, httpOnly cookie
+- **bcryptjs** (not bcrypt) — native bcrypt binary download blocked by Replit package firewall
+- Session type augmented in `src/types/express-session.d.ts` (`adminId: string`)
+- Admin routes: `/api/admin/auth/login|logout|me`, `/api/admin/dashboard`, `/api/admin/companions`, `/api/admin/users` (CRUD), `/api/admin/users/:id/emergency-contact` (PUT), `/api/admin/users/:id/dnd` (PUT)
+- `requireAdmin` middleware in `src/middlewares/requireAdmin.ts`
+- Create first admin: `pnpm --filter @workspace/api-server run create-admin <email> <password>`
+- Dev admin: `admin@companion.local` / `DevAdmin123!`
 
-## Color palette tokens (HSL)
+## Admin frontend (artifacts/admin)
+- wouter routing, AuthContext, AppLayout with sidebar
+- Pages: login, dashboard, /users list, /users/new, /users/:id (11 tabs)
+- Auth redirect uses `useEffect` in AppLayout — not during render (fixed anti-pattern)
+- Orval hook naming: `{OperationId}QueryParams` for query params (not `{OperationId}Params`)
 
-Dark: bg=`30 15% 5%`, fg=`38 35% 73%`, border=`30 18% 14%`, primary=`30 47% 55%`, muted-fg=`30 23% 49%`
-Light: bg=`38 38% 93%`, fg=`30 23% 13%`, primary=`27 52% 40%`, muted-fg=`30 23% 49%`
+## Codegen (lib/api-spec)
+- `pnpm --filter @workspace/api-spec run codegen` — regenerates hooks + Zod schemas
+- Orval naming for query params: `ListAdminUsersQueryParams` (not `ListAdminUsersParams`)
+- `format: email` in spec causes Orval to emit `z.email()` which doesn't exist in Zod v3 — use plain `type: string`
 
-## Provider interfaces (artifacts/api-server/src/providers/)
-Five interfaces: LLMProvider, SpeechProvider, SearchProvider, NotificationProvider, StorageProvider
-No concrete implementations yet — all return `throw new Error("Not implemented")`.
-
-## Domain skeletons (artifacts/api-server/src/domains/)
-12 domains: users, companions, conversation, memory, reminders, appointments, proactivity, routine, photos, search, safety, notifications.
-`safety/index.ts` is the most complete — has full classify → SMS flow with constraint enforcement.
-
-## Scheduler (artifacts/api-server/src/jobs/scheduler.ts)
-`AppScheduler` — minute-tick setInterval, skips if previous tick still running. Not yet wired into index.ts startup.
-
-## What is NOT done yet
-- Scheduler not started on server boot (needs `new AppScheduler().start()` in index.ts)
-- Provider concrete implementations (OpenAI, ElevenLabs/Deepgram, Bing/Perplexity, Twilio, Replit Object Storage)
-- Real tablet UI (Home screen, voice interaction, reminders, photos, news)
-- Real admin UI (senior profiles, conversation summary, safety events, settings)
-- OpenAPI spec only has /healthz — tablet and admin endpoints not yet defined
-- WebSocket route for real-time voice streaming not set up
-
-**Why:** Foundation was built first per architecture spec; real features require provider keys and are next phase.
+## Key constraints
+- UTC storage everywhere; user.timezone used for display
+- Migrations only — no schema reset
+- Secrets server-side only
+- No medical diagnosis; safety classification independent from response generation
+- No emergency SMS on routine deviation alone (MVP)
+- Overnight DND (e.g. 22:00–07:00): endTime < startTime means next-day crossing — scheduler must handle

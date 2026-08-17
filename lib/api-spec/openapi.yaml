@@ -3,20 +3,27 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: COMPANION API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: admin-auth
+    description: Admin authentication
+  - name: admin-users
+    description: Admin senior-user management
+  - name: admin-companions
+    description: Companion persona list
+  - name: admin-dashboard
+    description: Admin dashboard statistics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +31,586 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /admin/auth/login:
+    post:
+      operationId: loginAdmin
+      tags: [admin-auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/auth/logout:
+    post:
+      operationId: logoutAdmin
+      tags: [admin-auth]
+      summary: Admin logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/auth/me:
+    get:
+      operationId: getAdminMe
+      tags: [admin-auth]
+      summary: Get current admin session
+      responses:
+        "200":
+          description: Current admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Dashboard ─────────────────────────────────────────────────────────────
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin-dashboard]
+      summary: Dashboard statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  # ── Companions ────────────────────────────────────────────────────────────
+  /admin/companions:
+    get:
+      operationId: listAdminCompanions
+      tags: [admin-companions]
+      summary: List all companion personas
+      responses:
+        "200":
+          description: Companion list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Companion"
+
+  # ── Users ─────────────────────────────────────────────────────────────────
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin-users]
+      summary: List senior users
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Filter by name
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserListItem"
+    post:
+      operationId: createAdminUser
+      tags: [admin-users]
+      summary: Create a senior user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}:
+    get:
+      operationId: getAdminUser
+      tags: [admin-users]
+      summary: Get senior user detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateAdminUser
+      tags: [admin-users]
+      summary: Update a senior user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/emergency-contact:
+    get:
+      operationId: getEmergencyContact
+      tags: [admin-users]
+      summary: Get emergency contact for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Emergency contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmergencyContact"
+        "404":
+          description: None configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: upsertEmergencyContact
+      tags: [admin-users]
+      summary: Create or replace emergency contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmergencyContactInput"
+      responses:
+        "200":
+          description: Saved emergency contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmergencyContact"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/dnd:
+    get:
+      operationId: getDndPeriod
+      tags: [admin-users]
+      summary: Get DND period for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: DND period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DndPeriod"
+        "404":
+          description: None configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: upsertDndPeriod
+      tags: [admin-users]
+      summary: Create or replace DND period
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DndPeriodInput"
+      responses:
+        "200":
+          description: Saved DND period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DndPeriod"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
+    # ── Common ───────────────────────────────────────────────────────────────
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    # ── Auth ─────────────────────────────────────────────────────────────────
+    AdminLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 1
+
+    AdminUser:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: ["string", "null"]
+
+    # ── Dashboard ─────────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [totalUsers, activeUsers, companionDistribution]
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        companionDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompanionCount"
+
+    CompanionCount:
+      type: object
+      required: [companionName, count]
+      properties:
+        companionId:
+          type: ["string", "null"]
+        companionName:
+          type: string
+        count:
+          type: integer
+
+    # ── Companions ────────────────────────────────────────────────────────────
+    Companion:
+      type: object
+      required: [id, name, gender, isActive]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        gender:
+          type: string
+        tagline:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # ── Users ─────────────────────────────────────────────────────────────────
+    UserListItem:
+      type: object
+      required: [id, displayName, timezone, language, isActive, createdAt]
+      properties:
+        id:
+          type: string
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        displayName:
+          type: string
+        timezone:
+          type: string
+        language:
+          type: string
+        isActive:
+          type: boolean
+        companionId:
+          type: ["string", "null"]
+        companionName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    UserDetail:
+      type: object
+      required: [id, displayName, timezone, language, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        displayName:
+          type: string
+        preferredFormOfAddress:
+          type: ["string", "null"]
+        timezone:
+          type: string
+        language:
+          type: string
+        isActive:
+          type: boolean
+        companionId:
+          type: ["string", "null"]
+        companion:
+          $ref: "#/components/schemas/Companion"
+        deviceIdentifier:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserInput:
+      type: object
+      required: [firstName, lastName, timezone, language]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        preferredFormOfAddress:
+          type: string
+        timezone:
+          type: string
+          minLength: 1
+        language:
+          type: string
+          enum: [hr, en]
+        companionId:
+          type: string
+        deviceIdentifier:
+          type: string
+        isActive:
+          type: boolean
+
+    UserUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        preferredFormOfAddress:
+          type: ["string", "null"]
+        timezone:
+          type: string
+        language:
+          type: string
+          enum: [hr, en]
+        companionId:
+          type: ["string", "null"]
+        deviceIdentifier:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+
+    # ── Emergency Contact ─────────────────────────────────────────────────────
+    EmergencyContact:
+      type: object
+      required: [id, userId, name, phone, isPrimary, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        relationship:
+          type: ["string", "null"]
+        isPrimary:
+          type: boolean
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EmergencyContactInput:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+          minLength: 5
+        relationship:
+          type: string
+        isActive:
+          type: boolean
+
+    # ── DND ───────────────────────────────────────────────────────────────────
+    DndPeriod:
+      type: object
+      required: [id, userId, startTime, endTime, isActive, recurrenceDays, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        label:
+          type: ["string", "null"]
+        startTime:
+          type: string
+          description: Local HH:MM, e.g. "22:00"
+        endTime:
+          type: string
+          description: Local HH:MM, e.g. "07:00"
+        recurrenceDays:
+          type: array
+          items:
+            type: string
+          description: "Day names e.g. Mon,Tue — empty = every day"
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DndPeriodInput:
+      type: object
+      required: [startTime, endTime]
+      properties:
+        label:
+          type: string
+        startTime:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          description: Local HH:MM
+        endTime:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          description: Local HH:MM — may be before startTime for overnight DND
+        recurrenceDays:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean

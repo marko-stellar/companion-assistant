@@ -56,7 +56,7 @@ const COMPANIONS = [
       languageStyle: "conversational, uses gentle jokes and wordplay",
     },
   },
-] as const;
+];
 
 async function seed() {
   console.log("Seeding companions...");

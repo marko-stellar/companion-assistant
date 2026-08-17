@@ -1,36 +1,66 @@
-# [Project name]
+# COMPANION
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+An AI digital companion for independent seniors (65–75). Voice-first, tablet-native. The senior speaks naturally with a named AI companion (Ana, Mia, Luka, Ivan); a caregiver or family member configures everything through the admin panel.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/db run generate` — generate a new migration after schema changes
+- `pnpm --filter @workspace/db run migrate` — apply pending migrations to the DB
+- `pnpm --filter @workspace/db run seed` — seed the 4 companion personas (idempotent)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `SESSION_SECRET` — secret for admin session cookies (any long random string)
+
+### Creating the first admin user
+
+```
+pnpm --filter @workspace/api-server run create-admin admin@example.com YourSecurePassword123
+```
+
+Safe to run repeatedly — skips if the email already exists. Requires `DATABASE_URL` in the environment.
+
+**Dev default:** `admin@companion.local` / `DevAdmin123!` (change before production)
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- API: Express 5 + express-session (cookie-based admin auth)
+- DB: PostgreSQL + Drizzle ORM + pgvector
+- Validation: Zod, drizzle-zod
+- API codegen: Orval (from OpenAPI spec → `lib/api-spec/openapi.yaml`)
+- Build: esbuild (ESM bundle)
+- Admin auth: bcryptjs (pure JS, no native modules)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/db/src/schema/` — 19 table definitions (source of truth for DB shape)
+- `lib/api-spec/openapi.yaml` — OpenAPI spec (source of truth for API contract)
+- `lib/api-client-react/` — generated TanStack Query hooks (do not edit by hand)
+- `lib/api-zod/` — generated Zod validation schemas (do not edit by hand)
+- `artifacts/api-server/src/routes/admin/` — admin API route handlers
+- `artifacts/api-server/src/routes/tablet/` — tablet API route handlers
+- `artifacts/api-server/src/domains/` — domain service stubs
+- `artifacts/api-server/src/providers/` — provider interface stubs (LLM, TTS, SMS, etc.)
+- `artifacts/admin/src/` — admin React app (Vite + wouter)
+- `artifacts/tablet/src/` — tablet React app (Vite)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Modular monolith.** One Express server, two route groups (`/api/admin`, `/api/tablet`).
+- **Session-based admin auth.** Server-side sessions stored in `admin_sessions` postgres table via `connect-pg-simple`. Cookie is httpOnly, sameSite=lax.
+- **UTC everywhere.** All timestamps stored in UTC; `user.timezone` (IANA string) used for display and scheduling.
+- **Migrations only.** Schema changes go through `drizzle-kit generate` + `migrate`. Never `push` in production.
+- **Provider interfaces.** All AI, TTS, SMS, and search calls go through server-side interfaces in `src/providers/`. Never from the browser.
+- **bcryptjs over bcrypt.** The native `bcrypt` module requires a binary download blocked by the Replit package firewall. bcryptjs is pure JS and has the same API.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+**Senior experience (tablet):** The senior wakes to a warm home screen. They speak. COMPANION listens, responds with voice and gentle text. Proactive reminders surface as gentle nudges. No typing, no menus.
+
+**Caregiver experience (admin):** Caregiver sets up the senior's profile, chooses a companion persona, sets emergency contacts and DND hours, and reviews conversation history and safety alerts.
 
 ## User preferences
 
@@ -67,7 +97,12 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- **bcryptjs, not bcrypt.** `bcrypt` requires native binary download which is blocked by the Replit package firewall. Use `bcryptjs` (identical API).
+- **`connect-pg-simple` `createTableIfMissing` breaks in esbuild bundles.** The option reads `table.sql` from the package directory via `__dirname`, but esbuild replaces `__dirname` with the output dir at runtime. Pre-create `admin_sessions` via psql instead and omit the `createTableIfMissing` option. Schema: `CREATE TABLE IF NOT EXISTS admin_sessions (sid varchar NOT NULL COLLATE "default", sess json NOT NULL, expire timestamp(6) NOT NULL, CONSTRAINT admin_sessions_pkey PRIMARY KEY (sid)); CREATE INDEX IF NOT EXISTS IDX_admin_sessions_expire ON admin_sessions (expire);`
+- **drizzle-kit paths must be relative.** Using `path.join(__dirname, ...)` in `drizzle.config.ts` produces a double-slash path that drizzle-kit can't read. Use `"./migrations"` and `"./src/schema/index.ts"` as string literals.
+- **pnpm install --no-frozen-lockfile** when adding new packages that aren't yet in the lockfile.
+- **Always run `generate` then `migrate`**, not `push`, after schema changes.
+- **Orval naming for query params:** `{OperationId}QueryParams` (not `{OperationId}Params`) for query string schemas; path params keep `{OperationId}Params`.
 
 ## Pointers
 

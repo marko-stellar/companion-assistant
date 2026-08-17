@@ -19,7 +19,8 @@ export const emergencyContacts = pgTable(
     /** E.164 format preferred, e.g. "+38591..." */
     phone: text("phone").notNull(),
     relationship: text("relationship"),
-    isPrimary: boolean("is_primary").notNull().default(false),
+    isPrimary: boolean("is_primary").notNull().default(true),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

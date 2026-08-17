@@ -16,13 +16,22 @@ export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Split name fields for admin display and personalisation */
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    /** Fallback / legacy — set to "firstName lastName" on create */
     displayName: text("display_name").notNull(),
+    /** Optional: how COMPANION addresses the user ("Baka Ana", "Gospodine Luka"…) */
+    preferredFormOfAddress: text("preferred_form_of_address"),
     /** IANA timezone string, e.g. "Europe/Zagreb" */
     timezone: text("timezone").notNull().default("UTC"),
     /** ISO 639-1 language code: "hr" | "en" */
     language: text("language").notNull().default("en"),
     companionId: uuid("companion_id").references(() => companions.id),
+    /** Tablet PIN hash — placeholder for future tablet lock */
     tabletPinHash: text("tablet_pin_hash"),
+    /** Device/session identifier placeholder for MVP */
+    deviceIdentifier: text("device_identifier"),
     isActive: boolean("is_active").notNull().default(true),
     setupCompletedAt: timestamp("setup_completed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

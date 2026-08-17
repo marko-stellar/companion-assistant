@@ -1,0 +1,75 @@
+Implement the MVP admin authentication and senior-user setup flow on top of the existing architecture. Do not implement voice yet.
+
+ADMIN AUTH
+- Simple email/password login.
+- Passwords must be securely hashed.
+- Admin routes require authentication.
+- Session can be cookie-based or another secure server-managed mechanism.
+- No role hierarchy is needed beyond ADMIN.
+- Seed or document a safe method to create the first admin user without hard-coding a production password.
+
+ADMIN SCREENS
+1. /admin/login
+2. /admin dashboard
+3. user list
+4. create user
+5. edit user
+6. user detail page with sections/tabs for:
+   - Profile
+   - Companion
+   - Emergency contact
+   - DND
+   - Reminders
+   - Appointments
+   - Photos
+   - Memories
+   - Routines
+   - Conversations
+   - Safety
+Not every tab must have full feature logic yet. Empty-state placeholders are acceptable for later modules.
+
+USER FIELDS
+At minimum:
+- first name
+- last name
+- preferred language: hr or en
+- timezone
+- active flag
+- assigned companion
+- device/session identifier placeholder
+- optional preferred form of address
+
+EMERGENCY CONTACT
+Admin can configure:
+- name
+- relationship label
+- phone number
+- active flag
+
+DND SETTINGS
+Admin can configure one recurring DND period per day for MVP:
+- start local time
+- end local time
+Handle overnight DND such as 22:00-07:00 correctly.
+
+COMPANION SELECTION
+Admin selects one of the four seeded companions.
+
+UX
+Admin UI may be conventional desktop software, but keep it clean and modern.
+
+SECURITY
+- Validate and normalize email/phone inputs.
+- Do not expose password hashes.
+- Do not expose server secrets in any client response.
+
+ACCEPTANCE CRITERIA
+- Unauthenticated /admin routes redirect to login.
+- Admin can log in and log out.
+- Admin can create and edit a senior.
+- Admin can assign Ana/Mia/Luka/Ivan.
+- Admin can configure emergency contact and DND.
+- User list and detail pages persist after restart.
+- Overnight DND values save correctly.
+
+Do not change provider abstractions or unrelated schema without a clear migration.

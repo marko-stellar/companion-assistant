@@ -1,0 +1,152 @@
+/* ============================================================
+   COMPANION AI — Logo  (Dark + Light)
+   The mark is the Ambient Light itself, distilled to a static
+   emblem: a soft glow held inside a thin ring — light, kept.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400&display=swap');
+
+.logo-root {
+  width: 1194px;
+  height: 834px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  gap: 0;
+}
+
+.logo-root-dark  { background: #0e0b08; }
+.logo-root-light { background: #f5f0e8; }
+
+/* ── Primary lockup ─────────────────────────────────────────── */
+.logo-lockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+/* ── The mark ───────────────────────────────────────────────── */
+/* A static distillation of the Ambient Light: layered radial
+   glow inside a hairline ring. The ring is the home; the glow
+   is the companion inside it. */
+.logo-mark {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hairline ring — the vessel */
+.logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.logo-root-dark  .logo-ring { border-color: #4a3a22; }
+.logo-root-light .logo-ring { border-color: #c4ae88; }
+
+/* The glow — pure radial gradients, static, exportable */
+.logo-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  border-radius: 50%;
+}
+
+/* ── Wordmark ───────────────────────────────────────────────── */
+.logo-wordmark {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 64px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  margin: 0;
+  text-align: center;
+}
+
+.logo-root-dark  .logo-wordmark { color: #e8dcc0; }
+.logo-root-light .logo-wordmark { color: #3a2c18; }
+
+.logo-wordmark em {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.logo-root-dark  .logo-wordmark em { color: #d4a960; }
+.logo-root-light .logo-wordmark em { color: #a87c3c; }
+
+/* ── Variant strip ──────────────────────────────────────────── */
+.logo-variants {
+  position: absolute;
+  bottom: 64px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 96px;
+}
+
+.logo-variant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.logo-variant-label {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: lowercase;
+}
+
+.logo-root-dark  .logo-variant-label { color: #5a4830; }
+.logo-root-light .logo-variant-label { color: #a08860; }
+
+/* Small mark-only variant */
+.logo-mark-sm {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Horizontal lockup variant */
+.logo-horizontal {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo-horizontal .logo-wordmark {
+  font-size: 30px;
+}
+
+/* App-icon tile variant */
+.logo-tile {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-root-dark  .logo-tile { background: #161008; box-shadow: 0 0 0 1px #2a2014; }
+.logo-root-light .logo-tile { background: #0e0b08; box-shadow: 0 0 0 1px #ddd4be; }

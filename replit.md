@@ -40,6 +40,16 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 - Every screen must create emotional comfort and companionship.
 - Established language: Ambient Light (layered blur blobs, sine-based breathing), Cormorant Garamond italic serif + Inter, dark `#0e0b08` / light `#f5f0e8`, no chat bubbles, no timestamps, no red/urgency cues, no bouncing motion.
 - All screens delivered as matched dark + light pairs, side by side on the canvas (see `.agents/memory/companion-motion-language.md` for layout and motion details).
+- Logo/wordmark: the app name is just "companion" (lowercase, Cormorant Garamond) — no "AI" in the wordmark.
+
+### COMPANION implementation guardrails (binding whenever anything is implemented)
+1. TypeScript end-to-end where practical.
+2. PostgreSQL for structured data; pgvector (or equivalent supported vector mechanism) for semantic memory search.
+3. Replit Object Storage (or equivalent persistent object store) for uploaded photos — never the published app filesystem.
+4. API keys/credentials live in Replit Secrets; never expose provider keys to browser JavaScript.
+5. Deployed MVP runs on an always-on Reserved VM deployment (continuously available API, persistent connections, background scheduling).
+6. Minute-level reminder/proactivity checks via an application-level scheduler inside the always-on backend. Scheduled Deployments reserved for later independent jobs (cleanup, reports).
+7. A single health endpoint and basic structured logs from the beginning.
 
 ## Gotchas
 

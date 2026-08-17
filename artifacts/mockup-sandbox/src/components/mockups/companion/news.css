@@ -61,7 +61,7 @@
   letter-spacing: 0.015em;
   text-align: center;
   margin: 2px 0 0;
-  animation: newsFadeUp 1.0s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: newsFadeUp 1.4s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .news-root-dark  .news-statement { color: #9a8060; }

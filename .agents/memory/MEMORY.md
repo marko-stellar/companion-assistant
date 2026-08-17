@@ -1,0 +1,1 @@
+- [COMPANION motion & screenshot lessons](companion-motion-language.md) — transform-only staggering (opacity keyframes break screenshots), sine-breath motion rules, canvas row layout.

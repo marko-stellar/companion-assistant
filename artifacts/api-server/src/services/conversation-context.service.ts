@@ -155,9 +155,12 @@ export class ConversationContextService {
         user.preferredFormOfAddress ||
         user.firstName ||
         user.displayName;
+      const timezone = user.timezone ?? "UTC";
+      const localNow = this.formatLocalTime(new Date(), timezone);
       parts.push(
         `\nUSER PROFILE:\nThe person you are speaking with is called ${address}.`,
       );
+      parts.push(`The current local time is ${localNow}.`);
       if (user.timezone && user.timezone !== "UTC") {
         parts.push(`Their local timezone is ${user.timezone}.`);
       }

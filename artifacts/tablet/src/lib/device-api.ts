@@ -144,7 +144,7 @@ export interface SpeakResponse {
 
 export type PendingCheckIn =
   | { pending: false }
-  | { pending: true; id: string; text: string };
+  | { pending: true; id: string; text: string; detectedAtUtc: string | null };
 
 /** Poll for the oldest unacknowledged routine check-in for this device's user. */
 export async function fetchPendingCheckIn(): Promise<PendingCheckIn> {

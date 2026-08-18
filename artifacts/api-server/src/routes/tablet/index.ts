@@ -187,9 +187,15 @@ router.post(
   },
 );
 
-// GET /tablet/pending-checkin — first unacknowledged routine check-in for this user
+// GET /tablet/pending-checkin — most-recent unacknowledged routine check-in for this user,
+// filtered to deviations detected within the last CHECKIN_MAX_AGE_MS milliseconds.
+// Stale deviations (e.g. from overnight when the tablet was offline) are silently skipped.
+const CHECKIN_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 router.get("/pending-checkin", requireDevice, async (req, res): Promise<void> => {
   const userId = req.deviceUserId!;
+  const cutoff = new Date(Date.now() - CHECKIN_MAX_AGE_MS);
+
   const pending = await db
     .select({
       id: routineDeviations.id,
@@ -203,6 +209,7 @@ router.get("/pending-checkin", requireDevice, async (req, res): Promise<void> =>
         isNull(routineDeviations.checkInTriggeredAt),
         isNull(routineDeviations.resolvedAtUtc),
         isNotNull(routineDeviations.checkInText),
+        gt(routineDeviations.detectedAtUtc, cutoff),
       ),
     )
     .orderBy(routineDeviations.detectedAtUtc)
@@ -212,7 +219,12 @@ router.get("/pending-checkin", requireDevice, async (req, res): Promise<void> =>
     res.json({ pending: false });
     return;
   }
-  res.json({ pending: true, id: pending[0]!.id, text: pending[0]!.checkInText });
+  res.json({
+    pending: true,
+    id: pending[0]!.id,
+    text: pending[0]!.checkInText,
+    detectedAtUtc: pending[0]!.detectedAtUtc,
+  });
 });
 
 // POST /tablet/pending-checkin/:id/acknowledge — mark check-in as spoken

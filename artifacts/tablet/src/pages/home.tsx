@@ -12,10 +12,26 @@ import {
 
 // ── Routine check-in banner ──────────────────────────────────────────────────
 
+/** Client-side staleness threshold — mirrors the server-side guard (6 h). */
+const CHECKIN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Returns true when a detectedAtUtc timestamp is too old to surface to the senior.
+ * Acts as a second layer of defence after the server-side cutoff filter.
+ */
+function isCheckInStale(detectedAtUtc: string | null | undefined): boolean {
+  if (!detectedAtUtc) return false; // no timestamp — let the server decide
+  const age = Date.now() - new Date(detectedAtUtc).getTime();
+  return age > CHECKIN_MAX_AGE_MS;
+}
+
 /**
  * Polls /api/tablet/pending-checkin every 60 s.
  * When a pending check-in is found it speaks the text via /api/tablet/speak,
  * then acknowledges the check-in. The banner stays visible until dismissed.
+ *
+ * Stale deviations (older than CHECKIN_MAX_AGE_MS) are silently skipped on
+ * the client side as a second layer after the server-side cutoff filter.
  */
 function usePendingCheckIn() {
   const [checkIn, setCheckIn] = useState<{
@@ -32,6 +48,8 @@ function usePendingCheckIn() {
       try {
         const result = await fetchPendingCheckIn();
         if (result.pending && result.id !== activeIdRef.current) {
+          // Second-layer staleness guard: skip if client clock says it's too old
+          if (isCheckInStale(result.detectedAtUtc)) return;
           activeIdRef.current = result.id;
           setCheckIn({ id: result.id, text: result.text });
           setDismissed(false);

@@ -123,11 +123,15 @@ router.get("/me", requireDevice, async (req, res): Promise<void> => {
 });
 
 // GET /tablet/today — today's real reminder occurrences + appointments,
-// sorted by local time in the user's timezone.
+// sorted by local time in the user's timezone, plus upcoming appointment alerts
+// that may span the local day boundary (e.g. a midnight appointment checked at 23:50).
 router.get("/today", requireDevice, async (req, res): Promise<void> => {
   const userId = req.deviceUserId!;
-  const items = await scheduleService.getTodayItems(userId);
-  res.json({ items });
+  const [items, upcomingAlerts] = await Promise.all([
+    scheduleService.getTodayItems(userId),
+    scheduleService.getUpcomingAlerts(userId),
+  ]);
+  res.json({ items, upcomingAlerts });
 });
 
 // POST /tablet/occurrences/:id/respond — medication confirmation

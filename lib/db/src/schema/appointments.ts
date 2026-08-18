@@ -27,10 +27,11 @@ export const appointments = pgTable(
     location: text("location"),
     startsAtUtc: timestamp("starts_at_utc").notNull(),
     endsAtUtc: timestamp("ends_at_utc"),
-    /** Minutes before startsAtUtc to remind the user (dormant for now) */
-    reminderMinutesBefore: integer("reminder_minutes_before")
-      .notNull()
-      .default(30),
+    /**
+     * Minutes before startsAtUtc to show a pre-alert on the tablet.
+     * NULL means no alert is configured.
+     */
+    reminderMinutesBefore: integer("reminder_minutes_before"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

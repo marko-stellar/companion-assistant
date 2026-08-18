@@ -5,8 +5,11 @@
  * COMPANION API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AppointmentAlert } from './appointmentAlert';
 import type { TodayItem } from './todayItem';
 
 export interface TodayResponse {
   items: TodayItem[];
+  /** Appointments currently within their reminder window (may span day boundary) */
+  upcomingAlerts: AppointmentAlert[];
 }

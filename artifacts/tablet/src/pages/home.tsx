@@ -1,8 +1,114 @@
 import { useEffect, useState } from "react";
 import { useDevice, type VoiceError } from "@/contexts/device-context";
 import { AmbientOrb } from "@/components/ambient-orb";
-import type { TodayItem } from "@workspace/api-client-react";
+import type { TodayItem, AppointmentAlert } from "@workspace/api-client-react";
 import type { Strings } from "@/lib/i18n";
+
+// ── Appointment pre-alert helpers ───────────────────────────────────────────
+
+/** Refreshes to the current minute boundary so alert banners stay accurate. */
+function useMinuteClock(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    // Align to the next minute boundary, then tick every 60 s
+    const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
+    let intervalId: ReturnType<typeof setInterval>;
+    const alignTimer = setTimeout(() => {
+      setNow(new Date());
+      intervalId = setInterval(() => setNow(new Date()), 60_000);
+    }, msUntilNextMinute);
+    return () => {
+      clearTimeout(alignTimer);
+      clearInterval(intervalId);
+    };
+  }, []);
+  return now;
+}
+
+interface AppointmentAlertItem {
+  id: string;
+  title: string;
+  minutesUntil: number;
+}
+
+/**
+ * Filters server-provided alerts to those still in-window right now and
+ * attaches a live minutesUntil countdown. The server already did the heavy
+ * lifting (cross-day boundary check included); we re-check here so the
+ * banner disappears promptly when the window closes between fetches.
+ */
+function getActiveAlerts(
+  alerts: AppointmentAlert[],
+  now: Date,
+): AppointmentAlertItem[] {
+  const results: AppointmentAlertItem[] = [];
+  for (const alert of alerts) {
+    const minutesUntil =
+      (new Date(alert.startsAtUtc).getTime() - now.getTime()) / 60_000;
+    if (minutesUntil > 0 && minutesUntil <= alert.reminderMinutesBefore) {
+      results.push({
+        id: alert.id,
+        title: alert.title,
+        minutesUntil: Math.ceil(minutesUntil),
+      });
+    }
+  }
+  return results;
+}
+
+function AppointmentAlertBanner({
+  alerts,
+  t,
+}: {
+  alerts: AppointmentAlertItem[];
+  t: Strings;
+}) {
+  if (!alerts.length) return null;
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "rgba(200,155,60,0.13)",
+            border: "1px solid rgba(210,170,70,0.35)",
+          }}
+        >
+          {/* Soft amber bell icon */}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="rgba(220,180,80,0.85)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0"
+            aria-hidden="true"
+          >
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span
+            className="text-base flex-1"
+            style={{
+              color: "rgba(240,215,155,0.9)",
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontStyle: "italic",
+            }}
+          >
+            {alert.title} — {t.reminderSoon} {alert.minutesUntil}{" "}
+            {t.reminderMinutes}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -404,6 +510,7 @@ export function HomePage() {
   const {
     ctx,
     todayItems,
+    upcomingAlerts,
     companionState,
     voicePhase,
     voiceError,
@@ -424,6 +531,8 @@ export function HomePage() {
 
   const orientation = useOrientation();
   const liveGreeting = useGreetingRefresh(greeting);
+  const now = useMinuteClock();
+  const appointmentAlerts = getActiveAlerts(upcomingAlerts, now);
   const companionName = ctx?.companion?.name ?? "Companion";
   const isDnd = companionState === "dnd";
   const orbSize = orientation === "landscape" ? 220 : 240;
@@ -484,6 +593,11 @@ export function HomePage() {
             <StateLabel companionState={companionState} t={t} />
           </div>
 
+          {/* Appointment pre-alerts */}
+          {appointmentAlerts.length > 0 && (
+            <AppointmentAlertBanner alerts={appointmentAlerts} t={t} />
+          )}
+
           {/* Today list */}
           <div className="flex flex-col gap-3">
             <p
@@ -539,6 +653,9 @@ export function HomePage() {
               </h1>
             </div>
             <div className="flex flex-col gap-3 flex-1 mt-4">
+              {appointmentAlerts.length > 0 && (
+                <AppointmentAlertBanner alerts={appointmentAlerts} t={t} />
+              )}
               <p
                 className="text-xs tracking-[0.2em] uppercase"
                 style={{ color: "rgba(200,155,90,0.5)" }}

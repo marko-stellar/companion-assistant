@@ -101,9 +101,10 @@ router.post(
       location: body.location == null ? null : String(body.location),
       startsAtUtc: startsAt,
       endsAtUtc: endsAt,
-      ...(typeof body.reminderMinutesBefore === "number"
-        ? { reminderMinutesBefore: body.reminderMinutesBefore }
-        : {}),
+      reminderMinutesBefore:
+        typeof body.reminderMinutesBefore === "number"
+          ? body.reminderMinutesBefore
+          : null,
     });
 
     req.log.info({ appointmentId: appointment.id, userId }, "Appointment created");
@@ -171,8 +172,11 @@ router.patch(
       }
       patch.endsAtUtc = d;
     }
-    if (typeof body.reminderMinutesBefore === "number")
-      patch.reminderMinutesBefore = body.reminderMinutesBefore;
+    if (body.reminderMinutesBefore !== undefined)
+      patch.reminderMinutesBefore =
+        typeof body.reminderMinutesBefore === "number"
+          ? body.reminderMinutesBefore
+          : null;
     if (typeof body.isActive === "boolean") patch.isActive = body.isActive;
 
     const appointment = await appointmentsService.update(id, patch);

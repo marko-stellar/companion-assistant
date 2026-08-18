@@ -12,6 +12,7 @@ export interface AppointmentUpdateRequest {
   location?: string | null;
   startsAtUtc?: string;
   endsAtUtc?: string | null;
-  reminderMinutesBefore?: number;
+  /** null = clear the pre-alert */
+  reminderMinutesBefore?: number | null;
   isActive?: boolean;
 }

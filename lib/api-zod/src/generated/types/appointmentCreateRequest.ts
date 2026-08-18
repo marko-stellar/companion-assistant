@@ -13,5 +13,6 @@ export interface AppointmentCreateRequest {
   /** ISO timestamp (UTC) */
   startsAtUtc: string;
   endsAtUtc?: string | null;
-  reminderMinutesBefore?: number;
+  /** null = no pre-alert */
+  reminderMinutesBefore?: number | null;
 }

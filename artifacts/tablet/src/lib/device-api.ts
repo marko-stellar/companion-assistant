@@ -56,12 +56,12 @@ export async function fetchDeviceContext() {
   }
 }
 
-/** Fetch today's schedule items. */
+/** Fetch today's schedule items and active appointment alerts. */
 export async function fetchTodayItems() {
   try {
     return await getTabletToday();
   } catch {
-    return { items: [] };
+    return { items: [], upcomingAlerts: [] };
   }
 }
 

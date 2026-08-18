@@ -11,6 +11,7 @@ import {
 import type {
   TabletContext as ApiTabletContext,
   TodayItem,
+  AppointmentAlert,
 } from "@workspace/api-client-react";
 import {
   initDeviceAuth,
@@ -52,6 +53,12 @@ interface DeviceContextValue {
   appState: AppState;
   ctx: ApiTabletContext | null;
   todayItems: TodayItem[];
+  /**
+   * Appointments currently inside their reminder window, including those
+   * that start after the local-day boundary (e.g. a 00:15 appointment
+   * checked at 23:50).  Refreshed on every /today fetch.
+   */
+  upcomingAlerts: AppointmentAlert[];
   /** Derived from voicePhase + DND + online state — use for Orb/label display. */
   companionState: CompanionState;
   voicePhase: VoicePhase;
@@ -130,6 +137,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
   const [appState, setAppState] = useState<AppState>("loading");
   const [ctx, setCtx] = useState<ApiTabletContext | null>(null);
   const [todayItems, setTodayItems] = useState<TodayItem[]>([]);
+  const [upcomingAlerts, setUpcomingAlerts] = useState<AppointmentAlert[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>("idle");
   const [voiceError, setVoiceError] = useState<VoiceError | null>(null);
@@ -175,8 +183,11 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         }
         setCtx(result);
         setAppState("home");
-        const { items } = await fetchTodayItems();
-        if (!cancelled) setTodayItems(items);
+        const todayData = await fetchTodayItems();
+        if (!cancelled) {
+          setTodayItems(todayData.items);
+          setUpcomingAlerts(todayData.upcomingAlerts ?? []);
+        }
       } catch {
         if (!cancelled) setAppState("setup");
       }
@@ -211,8 +222,9 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
 
   const refreshTodayItems = useCallback(async () => {
     try {
-      const { items } = await fetchTodayItems();
-      setTodayItems(items);
+      const todayData = await fetchTodayItems();
+      setTodayItems(todayData.items);
+      setUpcomingAlerts(todayData.upcomingAlerts ?? []);
       lastFetchDateRef.current = localDateString();
     } catch {
       // Silently ignore transient errors — next poll or visibility event will retry
@@ -269,8 +281,11 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
       if (cancelled || !result) return;
       setCtx(result);
       setAppState("home");
-      const { items } = await fetchTodayItems();
-      if (!cancelled) setTodayItems(items);
+      const todayData = await fetchTodayItems();
+      if (!cancelled) {
+        setTodayItems(todayData.items);
+        setUpcomingAlerts(todayData.upcomingAlerts ?? []);
+      }
     })();
     return () => {
       cancelled = true;
@@ -295,8 +310,9 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         // network error — the refetch below restores the true state.
       }
       // Refresh so the list reflects the backend's done state
-      const { items } = await fetchTodayItems();
-      setTodayItems(items);
+      const todayData = await fetchTodayItems();
+      setTodayItems(todayData.items);
+      setUpcomingAlerts(todayData.upcomingAlerts ?? []);
     },
     [],
   );
@@ -469,6 +485,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         appState,
         ctx,
         todayItems,
+        upcomingAlerts,
         companionState,
         voicePhase,
         voiceError,

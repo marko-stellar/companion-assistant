@@ -30,6 +30,9 @@ const strings = {
     setupError: "Nevažeći ili istekli kôd. Pokušajte ponovo.",
     connecting: "Spajanje…",
     lastSeen: "Zadnji put viđen",
+    // Appointment pre-alert
+    reminderSoon: "za",
+    reminderMinutes: "minuta",
     // Voice error messages — senior-friendly, non-alarming
     errorMicDenied: "Molim dozvolite pristup mikrofonu u postavkama.",
     errorMicUnavailable: "Mikrofon nije dostupan. Provjerite uređaj.",
@@ -66,6 +69,9 @@ const strings = {
     setupError: "Invalid or expired code. Please try again.",
     connecting: "Connecting…",
     lastSeen: "Last seen",
+    // Appointment pre-alert
+    reminderSoon: "in",
+    reminderMinutes: "minutes",
     // Voice error messages — senior-friendly, non-alarming
     errorMicDenied: "Please allow microphone access in your settings.",
     errorMicUnavailable: "Microphone not available. Please check your device.",

@@ -16,4 +16,8 @@ export interface TodayItem {
   done: boolean;
   /** Reminder occurrence ID (present for reminder/medication items) */
   occurrenceId?: string;
+  /** Minutes before start to surface a pre-alert (appointments only) */
+  reminderMinutesBefore?: number;
+  /** ISO UTC timestamp of appointment start (appointments only) */
+  startsAtUtc?: string;
 }

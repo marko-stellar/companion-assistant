@@ -48,6 +48,13 @@ const appointmentSchema = z
     location: z.string().optional(),
     startsAt: z.string().min(1, "Start time is required"),
     endsAt: z.string().optional(),
+    reminderMinutesBefore: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(1440)
+      .optional()
+      .or(z.literal("")),
     isActive: z.boolean(),
   })
   .superRefine((val, ctx) => {
@@ -93,6 +100,8 @@ function AppointmentForm({
       endsAt: appointment?.endsAtUtc
         ? utcIsoToDatetimeLocal(appointment.endsAtUtc)
         : "",
+      reminderMinutesBefore:
+        appointment?.reminderMinutesBefore ?? "",
       isActive: appointment?.isActive ?? true,
     },
   });
@@ -100,12 +109,19 @@ function AppointmentForm({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   const onSubmit = async (values: AppointmentValues) => {
+    // Explicitly send null when blank so existing values can be cleared.
+    const reminderMinutesBefore =
+      values.reminderMinutesBefore !== "" &&
+      values.reminderMinutesBefore !== undefined
+        ? Number(values.reminderMinutesBefore)
+        : null;
     const base = {
       title: values.title.trim(),
       details: values.details?.trim() || null,
       location: values.location?.trim() || null,
       startsAtUtc: datetimeLocalToUtcIso(values.startsAt),
       endsAtUtc: values.endsAt ? datetimeLocalToUtcIso(values.endsAt) : null,
+      reminderMinutesBefore,
     };
     if (appointment) {
       await updateMutation.mutateAsync({
@@ -206,6 +222,31 @@ function AppointmentForm({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="reminderMinutesBefore"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Remind tablet before appointment (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={1440}
+                      placeholder="e.g. 30"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Minutes before the start time to show a gentle alert on the
+                    tablet. Leave blank to skip the pre-alert.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {appointment && (
               <FormField

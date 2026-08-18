@@ -5,7 +5,7 @@
  * All items are resolved against the user's local calendar day
  * (derived from user.timezone).
  */
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, gt } from "drizzle-orm";
 import {
   db,
   users,
@@ -19,6 +19,29 @@ import {
   formatLocalHHMM,
 } from "../lib/local-time";
 
+/**
+ * Pure helper — exported for unit testing.
+ * Returns true when `now` is within the reminder window: the appointment has
+ * not yet started AND the gap is within the configured lead-time.
+ */
+export function isInAlertWindow(
+  startsAtMs: number,
+  reminderMinutesBefore: number,
+  nowMs: number,
+): boolean {
+  const minutesUntil = (startsAtMs - nowMs) / 60_000;
+  return minutesUntil > 0 && minutesUntil <= reminderMinutesBefore;
+}
+
+export interface AppointmentAlertItem {
+  id: string;
+  title: string;
+  /** ISO UTC timestamp of the appointment start */
+  startsAtUtc: string;
+  /** The configured reminder window (minutes) */
+  reminderMinutesBefore: number;
+}
+
 export interface TodayItem {
   id: string;
   type: "reminder" | "medication" | "appointment";
@@ -27,6 +50,10 @@ export interface TodayItem {
   time: string;
   done: boolean;
   occurrenceId?: string;
+  /** Minutes before start to surface a pre-alert (appointments only) */
+  reminderMinutesBefore?: number;
+  /** ISO UTC timestamp of appointment start (appointments only) */
+  startsAtUtc?: string;
 }
 
 export class ScheduleService {
@@ -93,12 +120,54 @@ export class ScheduleService {
         time: formatLocalHHMM(appt.startsAtUtc, timezone),
         done: appt.startsAtUtc.getTime() < Date.now(),
         _sort: appt.startsAtUtc.getTime(),
+        startsAtUtc: appt.startsAtUtc.toISOString(),
+        ...(appt.reminderMinutesBefore !== null
+          ? { reminderMinutesBefore: appt.reminderMinutesBefore }
+          : {}),
       });
     }
 
     return items
       .sort((a, b) => a._sort - b._sort)
       .map(({ _sort: _s, ...rest }) => rest);
+  }
+
+  /**
+   * Appointments currently within their configured reminder window.
+   * Looks across day boundaries (up to 24 h ahead) so a 23:50 check can
+   * surface a 00:15 appointment with a 30-minute reminder.
+   */
+  async getUpcomingAlerts(userId: string): Promise<AppointmentAlertItem[]> {
+    const now = new Date();
+    // Look ahead up to 24 h — the maximum reminder window allowed by the admin form
+    const ceiling = new Date(now.getTime() + 24 * 60 * 60 * 1_000);
+
+    const rows = await db
+      .select()
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.userId, userId),
+          eq(appointments.isActive, true),
+          gt(appointments.startsAtUtc, now),
+          lte(appointments.startsAtUtc, ceiling),
+        ),
+      );
+
+    return rows
+      .filter((appt) => {
+        // Skip appointments with no reminder configured
+        if (appt.reminderMinutesBefore == null) return false;
+        const minutesUntil =
+          (appt.startsAtUtc.getTime() - now.getTime()) / 60_000;
+        return minutesUntil <= appt.reminderMinutesBefore;
+      })
+      .map((appt) => ({
+        id: appt.id,
+        title: appt.title,
+        startsAtUtc: appt.startsAtUtc.toISOString(),
+        reminderMinutesBefore: appt.reminderMinutesBefore!,
+      }));
   }
 
   /**

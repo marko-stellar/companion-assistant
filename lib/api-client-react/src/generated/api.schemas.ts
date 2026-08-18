@@ -395,7 +395,8 @@ export interface AppointmentCreateRequest {
   /** ISO timestamp (UTC) */
   startsAtUtc: string;
   endsAtUtc?: string | null;
-  reminderMinutesBefore?: number;
+  /** null = no pre-alert */
+  reminderMinutesBefore?: number | null;
 }
 
 export interface AppointmentUpdateRequest {
@@ -404,7 +405,8 @@ export interface AppointmentUpdateRequest {
   location?: string | null;
   startsAtUtc?: string;
   endsAtUtc?: string | null;
-  reminderMinutesBefore?: number;
+  /** null = clear the pre-alert */
+  reminderMinutesBefore?: number | null;
   isActive?: boolean;
 }
 
@@ -435,6 +437,10 @@ export interface TodayItem {
   done: boolean;
   /** Reminder occurrence ID (present for reminder/medication items) */
   occurrenceId?: string;
+  /** Minutes before start to surface a pre-alert (appointments only) */
+  reminderMinutesBefore?: number;
+  /** ISO UTC timestamp of appointment start (appointments only) */
+  startsAtUtc?: string;
 }
 
 export type OccurrenceRespondRequestResponse = typeof OccurrenceRespondRequestResponse[keyof typeof OccurrenceRespondRequestResponse];
@@ -450,12 +456,23 @@ export interface OccurrenceRespondRequest {
   response: OccurrenceRespondRequestResponse;
 }
 
+export interface AppointmentAlert {
+  id: string;
+  title: string;
+  /** ISO UTC timestamp of the appointment start */
+  startsAtUtc: string;
+  /** The configured reminder window (minutes) */
+  reminderMinutesBefore: number;
+}
+
 export interface OkResponse {
   ok: boolean;
 }
 
 export interface TodayResponse {
   items: TodayItem[];
+  /** Appointments currently within their reminder window (may span day boundary) */
+  upcomingAlerts: AppointmentAlert[];
 }
 
 export type ListAdminUsersParams = {

@@ -1399,6 +1399,8 @@ components:
           nullable: true
         reminderMinutesBefore:
           type: integer
+          nullable: true
+          description: "null = no pre-alert"
 
     AppointmentUpdateRequest:
       type: object
@@ -1418,6 +1420,8 @@ components:
           nullable: true
         reminderMinutesBefore:
           type: integer
+          nullable: true
+          description: "null = clear the pre-alert"
         isActive:
           type: boolean
 
@@ -1458,6 +1462,27 @@ components:
         occurrenceId:
           type: string
           description: "Reminder occurrence ID (present for reminder/medication items)"
+        reminderMinutesBefore:
+          type: integer
+          description: "Minutes before start to surface a pre-alert (appointments only)"
+        startsAtUtc:
+          type: string
+          description: "ISO UTC timestamp of appointment start (appointments only)"
+
+    AppointmentAlert:
+      type: object
+      required: [id, title, startsAtUtc, reminderMinutesBefore]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        startsAtUtc:
+          type: string
+          description: "ISO UTC timestamp of the appointment start"
+        reminderMinutesBefore:
+          type: integer
+          description: "The configured reminder window (minutes)"
 
     OccurrenceRespondRequest:
       type: object
@@ -1476,9 +1501,14 @@ components:
 
     TodayResponse:
       type: object
-      required: [items]
+      required: [items, upcomingAlerts]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/TodayItem"
+        upcomingAlerts:
+          type: array
+          description: "Appointments currently within their reminder window (may span day boundary)"
+          items:
+            $ref: "#/components/schemas/AppointmentAlert"

@@ -199,6 +199,65 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // ── Periodic refresh + visibility + midnight rollover ─────────────────────
+  // Track the local calendar date at last fetch so we can detect day rollover.
+  const lastFetchDateRef = useRef<string | null>(null);
+
+  /** Returns today's local date as "YYYY-MM-DD". */
+  function localDateString(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  const refreshTodayItems = useCallback(async () => {
+    try {
+      const { items } = await fetchTodayItems();
+      setTodayItems(items);
+      lastFetchDateRef.current = localDateString();
+    } catch {
+      // Silently ignore transient errors — next poll or visibility event will retry
+    }
+  }, []);
+
+  useEffect(() => {
+    if (appState !== "home") return;
+
+    // Stamp the date when we first enter home (items already loaded by auth init)
+    lastFetchDateRef.current = localDateString();
+
+    const POLL_MS = 5 * 60 * 1000; // 5 minutes
+
+    const intervalId = setInterval(() => {
+      refreshTodayItems();
+    }, POLL_MS);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        // Always refresh on focus; this also covers the midnight case because
+        // the API returns items for the current local day.
+        refreshTodayItems();
+      }
+    };
+
+    // Also handle the explicit midnight boundary: check on a 1-minute heartbeat
+    // whether the local date has ticked over. If the tablet's screen stays on
+    // with no visibility changes, the interval already covers it, but this
+    // heartbeat guarantees a reset within 1 minute of midnight.
+    const midnightCheckId = setInterval(() => {
+      if (lastFetchDateRef.current && lastFetchDateRef.current !== localDateString()) {
+        refreshTodayItems();
+      }
+    }, 60_000); // check every minute
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      clearInterval(midnightCheckId);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [appState, refreshTodayItems]);
+
   // ── Callbacks ─────────────────────────────────────────────────────────────
 
   const clearVoiceError = useCallback(() => setVoiceError(null), []);

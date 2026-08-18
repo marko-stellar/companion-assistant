@@ -190,6 +190,75 @@ export interface DndPeriodInput {
   isActive?: boolean;
 }
 
+export interface DeviceStatus {
+  hasActiveSession: boolean;
+  /** @nullable */
+  lastSeenAt?: string | null;
+  hasPendingCode: boolean;
+  /** @nullable */
+  codeExpiresAt?: string | null;
+}
+
+export interface DeviceCode {
+  /** 6-character alphanumeric setup code */
+  code: string;
+  expiresAt: string;
+}
+
+export interface TabletSetupInput {
+  /**
+     * @minLength 6
+     * @maxLength 8
+     */
+  code: string;
+}
+
+export interface TabletUser {
+  id: string;
+  /** @nullable */
+  firstName?: string | null;
+  displayName: string;
+  /** @nullable */
+  preferredFormOfAddress?: string | null;
+  timezone: string;
+  language: string;
+  isActive: boolean;
+}
+
+export interface TabletSetupResponse {
+  /** Long-lived device token to store in localStorage */
+  token: string;
+  user: TabletUser;
+  companion: Companion;
+}
+
+export interface TabletContext {
+  user: TabletUser;
+  companion: Companion;
+  dnd?: DndPeriod;
+}
+
+export type TodayItemType = typeof TodayItemType[keyof typeof TodayItemType];
+
+
+export const TodayItemType = {
+  reminder: 'reminder',
+  appointment: 'appointment',
+} as const;
+
+export interface TodayItem {
+  id: string;
+  type: TodayItemType;
+  title: string;
+  /** Local HH:MM */
+  time: string;
+  done?: boolean;
+}
+
+export interface TodayResponse {
+  items: TodayItem[];
+}
+
 export type ListAdminUsersParams = {
 /**
  * Filter by name

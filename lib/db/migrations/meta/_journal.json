@@ -15,6 +15,13 @@
       "when": 1786972062080,
       "tag": "20260817130742_sloppy_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787037927611,
+      "tag": "20260818072527_goofy_scorpion",
+      "breakpoints": true
     }
   ]
 }

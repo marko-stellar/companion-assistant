@@ -1,0 +1,19 @@
+{
+  "name": "companion",
+  "short_name": "companion",
+  "description": "Your personal AI companion",
+  "start_url": "/tablet/",
+  "scope": "/tablet/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e0b08",
+  "theme_color": "#0e0b08",
+  "icons": [
+    {
+      "src": "/tablet/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

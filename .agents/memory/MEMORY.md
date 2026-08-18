@@ -1,2 +1,4 @@
 - [COMPANION motion & screenshot lessons](companion-motion-language.md) — transform-only staggering (opacity keyframes break screenshots), sine-breath motion rules, canvas row layout.
 - [COMPANION foundation](companion-foundation.md) — DB migrations done (19 tables, pgvector), 4 companions seeded, 3 tests pass, tablet+admin artifacts running; providers/domains are stubs; scheduler not wired to boot.
+- [COMPANION codegen quirks](companion-codegen-quirks.md) — Orval appends to index.ts instead of overwriting; api-client-react must re-export custom-fetch.ts; api-zod must override index to only export generated/api.
+- [COMPANION device assignment](companion-device-assignment.md) — 6-char alphanumeric code (24h TTL), device_sessions with revokedAt, Bearer token in localStorage, tablet uses setAuthTokenGetter.

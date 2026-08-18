@@ -1,0 +1,55 @@
+Implement the senior-facing tablet experience and persistent device assignment. Do not add real speech/LLM integration yet.
+
+DEVICE MODEL
+The tablet is assigned to one senior by an admin/technical setup user and should remain signed in. The senior must not be asked to log in repeatedly.
+
+IMPLEMENT
+1. A secure device-assignment flow:
+   - Admin generates a one-time device setup code or link for a selected user.
+   - Tablet opens setup route, enters/consumes code, receives a long-lived device session/token.
+   - Store the session securely using the best available browser/PWA mechanism.
+   - Provide an admin action to revoke/regenerate the device assignment.
+2. /tablet detects assigned user and loads directly into home screen.
+3. If no valid assignment exists, show a simple setup screen, not an email/password login.
+
+TABLET HOME SCREEN
+Target permanently positioned tablet, portrait and landscape responsive.
+Display:
+- greeting based on local time and user name
+- selected companion name and simple visual representation
+- companion status area
+- TODAY list with reminders/appointments placeholder data from backend
+- one very large TALK TO ME / RAZGOVARAJ button
+- discreet connection status
+
+DESIGN
+- modern, minimal, high-quality visual impression
+- large typography
+- high contrast
+- large touch targets
+- minimal navigation
+- no hamburger menu on the primary screen
+- no chat transcript visible by default
+- no feedback thumbs/buttons
+- support Croatian and English UI strings
+
+STATES
+Implement visual states:
+- idle
+- listening placeholder
+- thinking placeholder
+- speaking placeholder
+- DND indicator
+- offline/internet-required state
+
+PWA
+Make the app installable as a PWA if practical in the current Replit stack, but do not let PWA work block core functionality.
+
+ACCEPTANCE CRITERIA
+- Admin can generate assignment for a senior.
+- Tablet can be assigned once and remains assigned after browser restart.
+- Senior is not shown admin login.
+- Admin can revoke the tablet session.
+- Tablet shows correct user, companion and localized greeting.
+- Home screen meets tablet accessibility requirements.
+- Offline state is understandable and clearly says internet is required.

@@ -2,20 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>COMPANION Tablet</title>
-    <meta name="description" content="COMPANION Tablet — built on Replit. Update this description to reflect the app." />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="COMPANION Tablet" />
-    <meta property="og:description" content="COMPANION Tablet — built on Replit. Update this description to reflect the app." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="COMPANION Tablet" />
-    <meta name="twitter:description" content="COMPANION Tablet — built on Replit. Update this description to reflect the app." />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <title>companion</title>
+    <meta name="description" content="Your personal AI companion" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/tablet/manifest.json" />
+    <meta name="theme-color" content="#0e0b08" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="companion" />
+
+    <!-- Prevent selection and callouts on tablet -->
+    <style>
+      * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+      html, body { overscroll-behavior: none; touch-action: manipulation; }
+    </style>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

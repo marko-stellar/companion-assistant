@@ -322,3 +322,124 @@ export const UpsertDndPeriodResponse = zod.object({
 })
 
 
+/**
+ * @summary Get device assignment status for a senior
+ */
+export const GetDeviceStatusParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetDeviceStatusResponse = zod.object({
+  "hasActiveSession": zod.boolean(),
+  "lastSeenAt": zod.coerce.date().nullish(),
+  "hasPendingCode": zod.boolean(),
+  "codeExpiresAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Generate a one-time device setup code for a senior
+ */
+export const GenerateDeviceCodeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GenerateDeviceCodeResponse = zod.object({
+  "code": zod.string().describe('6-character alphanumeric setup code'),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Revoke active device session for a senior
+ */
+export const RevokeDeviceSessionParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RevokeDeviceSessionResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Consume a one-time setup code and claim a device session
+ */
+export const tabletSetupBodyCodeMin = 6;
+export const tabletSetupBodyCodeMax = 8;
+
+
+
+export const TabletSetupBody = zod.object({
+  "code": zod.string().min(tabletSetupBodyCodeMin).max(tabletSetupBodyCodeMax)
+})
+
+export const TabletSetupResponse = zod.object({
+  "token": zod.string().describe('Long-lived device token to store in localStorage'),
+  "user": zod.object({
+  "id": zod.string(),
+  "firstName": zod.string().nullish(),
+  "displayName": zod.string(),
+  "preferredFormOfAddress": zod.string().nullish(),
+  "timezone": zod.string(),
+  "language": zod.string(),
+  "isActive": zod.boolean()
+}),
+  "companion": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "gender": zod.string(),
+  "tagline": zod.string().nullish(),
+  "isActive": zod.boolean()
+})
+})
+
+
+/**
+ * @summary Get current device context (user + companion + DND)
+ */
+export const GetTabletMeResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string(),
+  "firstName": zod.string().nullish(),
+  "displayName": zod.string(),
+  "preferredFormOfAddress": zod.string().nullish(),
+  "timezone": zod.string(),
+  "language": zod.string(),
+  "isActive": zod.boolean()
+}),
+  "companion": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "gender": zod.string(),
+  "tagline": zod.string().nullish(),
+  "isActive": zod.boolean()
+}),
+  "dnd": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "label": zod.string().nullish(),
+  "startTime": zod.string().describe('Local HH:MM, e.g. \"22:00\"'),
+  "endTime": zod.string().describe('Local HH:MM, e.g. \"07:00\"'),
+  "recurrenceDays": zod.array(zod.string()).describe('Day names e.g. Mon,Tue — empty = every day'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).optional()
+})
+
+
+/**
+ * @summary Get today's reminders and appointments
+ */
+export const GetTabletTodayResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['reminder', 'appointment']),
+  "title": zod.string(),
+  "time": zod.string().describe('Local HH:MM'),
+  "done": zod.boolean().optional()
+}))
+})
+
+

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, Check, ShieldAlert, Clock, Calendar, Image as ImageIcon, Brain, ListChecks, MessageSquare, Shield, User, Bot, Phone } from "lucide-react";
+import { ArrowLeft, Check, ShieldAlert, Clock, Calendar, Image as ImageIcon, Brain, ListChecks, MessageSquare, Shield, User, Bot, Phone, Tablet, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
 import { 
   useGetAdminUser, 
   getGetAdminUserQueryKey,
@@ -11,7 +11,11 @@ import {
   useUpsertEmergencyContact,
   useGetDndPeriod,
   getGetDndPeriodQueryKey,
-  useUpsertDndPeriod
+  useUpsertDndPeriod,
+  useGetDeviceStatus,
+  getGetDeviceStatusQueryKey,
+  useGenerateDeviceCode,
+  useRevokeDeviceSession,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -624,6 +628,171 @@ function DndTab({ userId }: { userId: string }) {
 }
 
 // -----------------------------------------------------------------------------
+// DEVICE TAB
+// -----------------------------------------------------------------------------
+
+function DeviceTab({ userId }: { userId: string }) {
+  const queryClient = useQueryClient();
+  const { data: status, isLoading } = useGetDeviceStatus(userId);
+
+  const generateMutation = useGenerateDeviceCode({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetDeviceStatusQueryKey(userId) });
+      },
+    },
+  });
+
+  const revokeMutation = useRevokeDeviceSession({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetDeviceStatusQueryKey(userId) });
+        generateMutation.reset();
+      },
+    },
+  });
+
+  function formatRelativeTime(date: Date | string | null | undefined): string {
+    if (!date) return "Never";
+    const d = typeof date === "string" ? new Date(date) : date;
+    const diff = Date.now() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
+  function formatExpiry(date: Date | string | null | undefined): string {
+    if (!date) return "";
+    const d = typeof date === "string" ? new Date(date) : date;
+    const diff = d.getTime() - Date.now();
+    if (diff <= 0) return "Expired";
+    const hrs = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    if (hrs > 0) return `Expires in ${hrs}h ${mins}m`;
+    return `Expires in ${mins}m`;
+  }
+
+  const generatedCode = generateMutation.data;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Session status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Tablet className="h-4 w-4" />
+            Device Status
+          </CardTitle>
+          <CardDescription>
+            Manage the physical tablet assigned to this senior.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center gap-3">
+              {status?.hasActiveSession ? (
+                <Wifi className="h-5 w-5 text-green-500" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <div>
+                <p className="font-medium text-sm">
+                  {status?.hasActiveSession ? "Tablet assigned" : "No tablet assigned"}
+                </p>
+                {status?.hasActiveSession && (
+                  <p className="text-xs text-muted-foreground">
+                    Last seen: {formatRelativeTime(status.lastSeenAt)}
+                  </p>
+                )}
+              </div>
+            </div>
+            {status?.hasActiveSession && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => revokeMutation.mutate({ id: userId })}
+                disabled={revokeMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                {revokeMutation.isPending ? "Revoking…" : "Revoke"}
+              </Button>
+            )}
+          </div>
+
+          {revokeMutation.isSuccess && (
+            <p className="text-sm text-green-600">Device session revoked. The tablet will be signed out.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Setup code */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Setup Code</CardTitle>
+          <CardDescription>
+            Generate a one-time code for the senior to enter on their tablet. Valid for 24 hours.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Show existing pending code status */}
+          {status?.hasPendingCode && !generatedCode && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-4 text-sm text-amber-700 dark:text-amber-400">
+              A pending code already exists ({formatExpiry(status.codeExpiresAt)}). Generating a new one will invalidate it.
+            </div>
+          )}
+
+          {/* Freshly generated code — show prominently */}
+          {generatedCode && (
+            <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-6">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                Setup Code — enter on the tablet
+              </p>
+              <p className="font-mono text-5xl tracking-[0.4em] font-bold text-primary select-all">
+                {generatedCode.code}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formatExpiry(generatedCode.expiresAt)}
+              </p>
+            </div>
+          )}
+
+          <Button
+            onClick={() => generateMutation.mutate({ id: userId })}
+            disabled={generateMutation.isPending}
+            variant={generatedCode ? "outline" : "default"}
+            className="w-full sm:w-auto"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${generateMutation.isPending ? "animate-spin" : ""}`} />
+            {generateMutation.isPending
+              ? "Generating…"
+              : generatedCode
+              ? "Regenerate Code"
+              : "Generate Setup Code"}
+          </Button>
+
+          {generateMutation.isError && (
+            <p className="text-sm text-destructive">Failed to generate code. Please try again.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
 // MAIN COMPONENT
 // -----------------------------------------------------------------------------
 
@@ -684,6 +853,7 @@ export function UserDetail() {
     { id: "routines", label: "Routines", icon: ListChecks, component: <PlaceholderTab title="Daily Routines" description="Set up morning and evening rituals." icon={ListChecks} /> },
     { id: "conversations", label: "Conversations", icon: MessageSquare, component: <PlaceholderTab title="Chat History" description="Review recent interactions with the companion." icon={MessageSquare} /> },
     { id: "safety", label: "Safety", icon: Shield, component: <PlaceholderTab title="Safety & Alerts" description="Configure fall detection, prolonged silence, and distress word alerts." icon={Shield} /> },
+    { id: "device", label: "Device", icon: Tablet, component: <DeviceTab userId={user.id} /> },
   ];
 
   return (

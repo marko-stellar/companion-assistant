@@ -17,3 +17,5 @@ export * from "./photo_memories";
 export * from "./safety_events";
 export * from "./news_sources";
 export * from "./audit_logs";
+export * from "./device_setup_codes";
+export * from "./device_sessions";

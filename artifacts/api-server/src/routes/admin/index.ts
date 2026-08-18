@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import authRouter from "./auth";
 import usersRouter from "./users";
 import companionsRouter from "./companions";
+import deviceRouter from "./device";
 
 /**
  * Admin API route group — /api/admin/*
@@ -18,5 +19,6 @@ router.get("/ping", (_req, res) => {
 router.use(authRouter);
 router.use(companionsRouter); // also handles /dashboard
 router.use(usersRouter);
+router.use(deviceRouter);
 
 export default router;

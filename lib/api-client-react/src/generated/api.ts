@@ -24,6 +24,8 @@ import type {
   AdminUser,
   Companion,
   DashboardStats,
+  DeviceCode,
+  DeviceStatus,
   DndPeriod,
   DndPeriodInput,
   EmergencyContact,
@@ -32,6 +34,10 @@ import type {
   HealthStatus,
   ListAdminUsersParams,
   MessageResponse,
+  TabletContext,
+  TabletSetupInput,
+  TabletSetupResponse,
+  TodayResponse,
   UserDetail,
   UserInput,
   UserListItem,
@@ -1116,4 +1122,448 @@ export const useUpsertDndPeriod = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getUpsertDndPeriodMutationOptions(options));
     }
+
+export const getGetDeviceStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/device-status`
+}
+
+/**
+ * @summary Get device assignment status for a senior
+ */
+export const getDeviceStatus = async (id: string, options?: RequestInit): Promise<DeviceStatus> => {
+
+  return customFetch<DeviceStatus>(getGetDeviceStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeviceStatusQueryKey = (id: string,) => {
+    return [
+    `/api/admin/users/${id}/device-status`
+    ] as const;
+    }
+
+
+export const getGetDeviceStatusQueryOptions = <TData = Awaited<ReturnType<typeof getDeviceStatus>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeviceStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeviceStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeviceStatus>>> = ({ signal }) => getDeviceStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeviceStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeviceStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getDeviceStatus>>>
+export type GetDeviceStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get device assignment status for a senior
+ */
+
+export function useGetDeviceStatus<TData = Awaited<ReturnType<typeof getDeviceStatus>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeviceStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeviceStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGenerateDeviceCodeUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/device-code`
+}
+
+/**
+ * @summary Generate a one-time device setup code for a senior
+ */
+export const generateDeviceCode = async (id: string, options?: RequestInit): Promise<DeviceCode> => {
+
+  return customFetch<DeviceCode>(getGenerateDeviceCodeUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getGenerateDeviceCodeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateDeviceCode>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateDeviceCode>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['generateDeviceCode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateDeviceCode>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateDeviceCode(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateDeviceCodeMutationResult = NonNullable<Awaited<ReturnType<typeof generateDeviceCode>>>
+
+    export type GenerateDeviceCodeMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Generate a one-time device setup code for a senior
+ */
+export const useGenerateDeviceCode = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateDeviceCode>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateDeviceCode>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getGenerateDeviceCodeMutationOptions(options));
+    }
+
+export const getRevokeDeviceSessionUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/device-session`
+}
+
+/**
+ * @summary Revoke active device session for a senior
+ */
+export const revokeDeviceSession = async (id: string, options?: RequestInit): Promise<MessageResponse> => {
+
+  return customFetch<MessageResponse>(getRevokeDeviceSessionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeDeviceSessionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeDeviceSession>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeDeviceSession>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['revokeDeviceSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeDeviceSession>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeDeviceSession(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeDeviceSessionMutationResult = NonNullable<Awaited<ReturnType<typeof revokeDeviceSession>>>
+
+    export type RevokeDeviceSessionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Revoke active device session for a senior
+ */
+export const useRevokeDeviceSession = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeDeviceSession>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeDeviceSession>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getRevokeDeviceSessionMutationOptions(options));
+    }
+
+export const getTabletSetupUrl = () => {
+
+
+
+
+  return `/api/tablet/setup`
+}
+
+/**
+ * @summary Consume a one-time setup code and claim a device session
+ */
+export const tabletSetup = async (tabletSetupInput: TabletSetupInput, options?: RequestInit): Promise<TabletSetupResponse> => {
+
+  return customFetch<TabletSetupResponse>(getTabletSetupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(tabletSetupInput)
+  }
+);}
+
+
+
+
+
+export const getTabletSetupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tabletSetup>>, TError,{data: BodyType<TabletSetupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof tabletSetup>>, TError,{data: BodyType<TabletSetupInput>}, TContext> => {
+
+const mutationKey = ['tabletSetup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tabletSetup>>, {data: BodyType<TabletSetupInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  tabletSetup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TabletSetupMutationResult = NonNullable<Awaited<ReturnType<typeof tabletSetup>>>
+    export type TabletSetupMutationBody = BodyType<TabletSetupInput>
+    export type TabletSetupMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Consume a one-time setup code and claim a device session
+ */
+export const useTabletSetup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tabletSetup>>, TError,{data: BodyType<TabletSetupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof tabletSetup>>,
+        TError,
+        {data: BodyType<TabletSetupInput>},
+        TContext
+      > => {
+      return useMutation(getTabletSetupMutationOptions(options));
+    }
+
+export const getGetTabletMeUrl = () => {
+
+
+
+
+  return `/api/tablet/me`
+}
+
+/**
+ * @summary Get current device context (user + companion + DND)
+ */
+export const getTabletMe = async ( options?: RequestInit): Promise<TabletContext> => {
+
+  return customFetch<TabletContext>(getGetTabletMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTabletMeQueryKey = () => {
+    return [
+    `/api/tablet/me`
+    ] as const;
+    }
+
+
+export const getGetTabletMeQueryOptions = <TData = Awaited<ReturnType<typeof getTabletMe>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTabletMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTabletMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTabletMe>>> = ({ signal }) => getTabletMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTabletMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTabletMeQueryResult = NonNullable<Awaited<ReturnType<typeof getTabletMe>>>
+export type GetTabletMeQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get current device context (user + companion + DND)
+ */
+
+export function useGetTabletMe<TData = Awaited<ReturnType<typeof getTabletMe>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTabletMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTabletMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTabletTodayUrl = () => {
+
+
+
+
+  return `/api/tablet/today`
+}
+
+/**
+ * @summary Get today's reminders and appointments
+ */
+export const getTabletToday = async ( options?: RequestInit): Promise<TodayResponse> => {
+
+  return customFetch<TodayResponse>(getGetTabletTodayUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTabletTodayQueryKey = () => {
+    return [
+    `/api/tablet/today`
+    ] as const;
+    }
+
+
+export const getGetTabletTodayQueryOptions = <TData = Awaited<ReturnType<typeof getTabletToday>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTabletToday>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTabletTodayQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTabletToday>>> = ({ signal }) => getTabletToday({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTabletToday>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTabletTodayQueryResult = NonNullable<Awaited<ReturnType<typeof getTabletToday>>>
+export type GetTabletTodayQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get today's reminders and appointments
+ */
+
+export function useGetTabletToday<TData = Awaited<ReturnType<typeof getTabletToday>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTabletToday>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTabletTodayQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

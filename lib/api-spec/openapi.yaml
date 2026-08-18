@@ -18,6 +18,10 @@ tags:
     description: Companion persona list
   - name: admin-dashboard
     description: Admin dashboard statistics
+  - name: admin-device
+    description: Tablet device assignment management
+  - name: tablet
+    description: Tablet-facing API (Bearer token auth)
 paths:
   /healthz:
     get:
@@ -327,7 +331,149 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Admin device assignment ───────────────────────────────────────────────
+  /admin/users/{id}/device-status:
+    get:
+      operationId: getDeviceStatus
+      tags: [admin-device]
+      summary: Get device assignment status for a senior
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceStatus"
+
+  /admin/users/{id}/device-code:
+    post:
+      operationId: generateDeviceCode
+      tags: [admin-device]
+      summary: Generate a one-time device setup code for a senior
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Generated code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceCode"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/device-session:
+    delete:
+      operationId: revokeDeviceSession
+      tags: [admin-device]
+      summary: Revoke active device session for a senior
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          description: No active session found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Tablet ────────────────────────────────────────────────────────────────
+  /tablet/setup:
+    post:
+      operationId: tabletSetup
+      tags: [tablet]
+      summary: Consume a one-time setup code and claim a device session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TabletSetupInput"
+      responses:
+        "200":
+          description: Device session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletSetupResponse"
+        "400":
+          description: Invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/me:
+    get:
+      operationId: getTabletMe
+      tags: [tablet]
+      summary: Get current device context (user + companion + DND)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Device context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabletContext"
+        "401":
+          description: Token invalid or revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/today:
+    get:
+      operationId: getTabletToday
+      tags: [tablet]
+      summary: Get today's reminders and appointments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Today's items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayResponse"
+        "401":
+          description: Token invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     # ── Common ───────────────────────────────────────────────────────────────
     HealthStatus:
@@ -614,3 +760,108 @@ components:
             type: string
         isActive:
           type: boolean
+
+    # ── Device assignment ──────────────────────────────────────────────────────
+    DeviceStatus:
+      type: object
+      required: [hasActiveSession, hasPendingCode]
+      properties:
+        hasActiveSession:
+          type: boolean
+        lastSeenAt:
+          type: ["string", "null"]
+          format: date-time
+        hasPendingCode:
+          type: boolean
+        codeExpiresAt:
+          type: ["string", "null"]
+          format: date-time
+
+    DeviceCode:
+      type: object
+      required: [code, expiresAt]
+      properties:
+        code:
+          type: string
+          description: 6-character alphanumeric setup code
+        expiresAt:
+          type: string
+          format: date-time
+
+    # ── Tablet ────────────────────────────────────────────────────────────────
+    TabletSetupInput:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 8
+
+    TabletUser:
+      type: object
+      required: [id, displayName, timezone, language, isActive]
+      properties:
+        id:
+          type: string
+        firstName:
+          type: ["string", "null"]
+        displayName:
+          type: string
+        preferredFormOfAddress:
+          type: ["string", "null"]
+        timezone:
+          type: string
+        language:
+          type: string
+        isActive:
+          type: boolean
+
+    TabletSetupResponse:
+      type: object
+      required: [token, user, companion]
+      properties:
+        token:
+          type: string
+          description: Long-lived device token to store in localStorage
+        user:
+          $ref: "#/components/schemas/TabletUser"
+        companion:
+          $ref: "#/components/schemas/Companion"
+
+    TabletContext:
+      type: object
+      required: [user, companion]
+      properties:
+        user:
+          $ref: "#/components/schemas/TabletUser"
+        companion:
+          $ref: "#/components/schemas/Companion"
+        dnd:
+          $ref: "#/components/schemas/DndPeriod"
+
+    TodayItem:
+      type: object
+      required: [id, type, title, time]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [reminder, appointment]
+        title:
+          type: string
+        time:
+          type: string
+          description: "Local HH:MM"
+        done:
+          type: boolean
+
+    TodayResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TodayItem"

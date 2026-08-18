@@ -308,7 +308,7 @@ type EmergencyValues = z.infer<typeof emergencySchema>;
 
 function EmergencyContactTab({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const { data, isLoading, error } = useGetEmergencyContact(userId, { query: { retry: false } });
+  const { data, isLoading, error } = useGetEmergencyContact(userId, { query: { queryKey: getGetEmergencyContactQueryKey(userId), retry: false } });
   
   const upsertMutation = useUpsertEmergencyContact({
     mutation: {
@@ -463,7 +463,7 @@ type DndValues = z.infer<typeof dndSchema>;
 
 function DndTab({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useGetDndPeriod(userId, { query: { retry: false } });
+  const { data, isLoading } = useGetDndPeriod(userId, { query: { queryKey: getGetDndPeriodQueryKey(userId), retry: false } });
   
   const upsertMutation = useUpsertDndPeriod({
     mutation: {
@@ -1397,7 +1397,7 @@ function PlaceholderTab({ title, description, icon: Icon }: { title: string, des
 export function UserDetail() {
   const params = useParams();
   const id = params.id as string;
-  const { data: user, isLoading } = useGetAdminUser(id, { query: { enabled: !!id } });
+  const { data: user, isLoading } = useGetAdminUser(id, { query: { queryKey: getGetAdminUserQueryKey(id), enabled: !!id } });
 
   if (isLoading) {
     return (

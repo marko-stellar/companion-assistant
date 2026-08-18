@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const { data: admin, isLoading, error } = useGetAdminMe({
     query: {
+      queryKey: getGetAdminMeQueryKey(),
       retry: false,
     }
   });

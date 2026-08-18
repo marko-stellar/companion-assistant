@@ -1,19 +1,21 @@
 /**
  * POST /api/tablet/converse
  *
- * Full voice conversation loop with persistent context assembly:
+ * Full voice conversation loop with persistent context assembly and
+ * structured tool calling:
  *   1. Decode and transcribe audio (STT)
  *   2. Get or create a conversation session
- *   3. Build a bounded context window via ConversationContextService
- *      (includes companion identity, user profile, schedule, DND, retrieved memories)
- *   4. Generate a reply via LLMProvider
- *   5. Synthesize audio via SpeechProvider (TTS)
- *   6. Persist both messages with metadata (latency, language, model)
- *   7. Increment conversation message_count; fire-and-forget summary check
- *   8. Fire-and-forget memory extraction from user transcript
+ *   3. Build a bounded context window (companion identity, user profile,
+ *      schedule, DND, retrieved memories, tool descriptions)
+ *   4. Call respondWithTools — LLM returns either text or a tool call
+ *   5a. Tool call → validate + execute → call respond() for confirmation
+ *   5b. Text → use directly
+ *   6. Synthesize audio via SpeechProvider (TTS)
+ *   7. Persist both messages with metadata
+ *   8. Increment message_count; fire-and-forget summary + memory extraction
  *
  * Privacy: transcript content is NEVER written to server logs.
- * Only metadata (lengths, latencies, language) is logged.
+ * Security: userId is always from req.deviceUserId — never from LLM args.
  */
 
 import { Router } from "express";
@@ -34,6 +36,8 @@ import {
 import { conversationContextService } from "../../services/conversation-context.service";
 import { conversationSummaryService } from "../../services/conversation-summary.service";
 import { memoryExtractionService } from "../../services/memory-extraction.service";
+import { parseToolCall, toolExecutor } from "../../tools";
+import { buildToolsPromptSection } from "../../tools/definitions";
 
 const router = Router();
 
@@ -73,6 +77,7 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
 
   const { user, companion } = row;
   const language = user.language ?? "en";
+  const timezone = user.timezone ?? "UTC";
 
   // ── 2. Decode audio ───────────────────────────────────────────────────────
   let audioBuffer: Buffer;
@@ -131,25 +136,93 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
       userTranscript: transcript,
     });
 
+  const toolsSection = buildToolsPromptSection(effectiveLang);
+  const fullSystemPrompt = systemPrompt + toolsSection;
+
   const llmMessages = [
-    { role: "system" as const, content: systemPrompt },
+    { role: "system" as const, content: fullSystemPrompt },
     ...recentMessages,
     { role: "user" as const, content: transcript },
   ];
 
-  // ── 6. Generate LLM reply ─────────────────────────────────────────────────
+  // ── 6. LLM turn with tool support ─────────────────────────────────────────
   const llmStart = Date.now();
   let reply: string;
   let tokenUsage: { promptTokens: number; completionTokens: number } | undefined;
 
   try {
-    const result = await llmProvider.respond({
+    const firstResult = await llmProvider.respondWithTools({
       messages: llmMessages,
       language: effectiveLang,
-      maxTokens: 150,
+      maxTokens: 200,
+      toolsSection,
     });
-    reply = result.content.trim();
-    tokenUsage = result.usage;
+
+    if (firstResult.type === "tool_call") {
+      // ── 6a. Execute the tool ─────────────────────────────────────────────
+      req.log.info({ tool: firstResult.toolName, userId }, "Tool call detected");
+
+      const toolResult = await toolExecutor.execute(
+        { tool: firstResult.toolName, args: firstResult.args },
+        { userId, timezone, conversationId: convId },
+      );
+
+      tokenUsage = firstResult.usage;
+
+      // ── 6b. Ask LLM to produce a natural-language confirmation ───────────
+      const resultMessage = toolResult.ok
+        ? `[Tool ${firstResult.toolName} succeeded. Confirm naturally: "${toolResult.confirmationHint}"]`
+        : `[Tool ${firstResult.toolName} failed: "${toolResult.error}". Apologise briefly and explain.]`;
+
+      const confirmResult = await llmProvider.respond({
+        messages: [
+          { role: "system" as const, content: systemPrompt },
+          ...recentMessages,
+          { role: "user" as const, content: transcript },
+          { role: "assistant" as const, content: resultMessage },
+        ],
+        language: effectiveLang,
+        maxTokens: 120,
+      });
+
+      reply = confirmResult.content.trim();
+      if (confirmResult.usage && tokenUsage) {
+        tokenUsage = {
+          promptTokens: tokenUsage.promptTokens + confirmResult.usage.promptTokens,
+          completionTokens: tokenUsage.completionTokens + confirmResult.usage.completionTokens,
+        };
+      } else if (confirmResult.usage) {
+        tokenUsage = confirmResult.usage;
+      }
+
+    } else {
+      // ── 6c. Plain text response — check for inline <tool_call> block ─────
+      const inlineToolCall = parseToolCall(firstResult.content);
+      if (inlineToolCall) {
+        req.log.info({ tool: inlineToolCall.tool, userId }, "Inline tool call parsed");
+        const toolResult = await toolExecutor.execute(inlineToolCall, { userId, timezone, conversationId: convId });
+
+        const resultMessage = toolResult.ok
+          ? `[Tool ${inlineToolCall.tool} succeeded. Confirm naturally: "${toolResult.confirmationHint}"]`
+          : `[Tool ${inlineToolCall.tool} failed: "${toolResult.error}". Apologise briefly and explain.]`;
+
+        const confirmResult = await llmProvider.respond({
+          messages: [
+            { role: "system" as const, content: systemPrompt },
+            ...recentMessages,
+            { role: "user" as const, content: transcript },
+            { role: "assistant" as const, content: resultMessage },
+          ],
+          language: effectiveLang,
+          maxTokens: 120,
+        });
+        reply = confirmResult.content.trim();
+        tokenUsage = confirmResult.usage;
+      } else {
+        reply = firstResult.content.trim();
+        tokenUsage = firstResult.usage;
+      }
+    }
   } catch (err) {
     req.log.error({ err }, "LLM failed");
     res.status(500).json({
@@ -187,11 +260,10 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
   const totalLatencyMs = Date.now() - routeStart;
 
   // ── 8. Persist messages with metadata ─────────────────────────────────────
-  // Privacy: content stored in DB only — NEVER written to log output.
   const sttModel = process.env.ELEVENLABS_STT_MODEL ?? "scribe_v1";
   const ttsModel = process.env.ELEVENLABS_TTS_MODEL ?? "eleven_multilingual_v2";
 
-  const [userMsg, assistantMsg] = await db
+  const [userMsg] = await db
     .insert(conversationMessages)
     .values([
       {
@@ -236,7 +308,7 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     updated?.messageCount ?? 0,
   );
 
-  // ── 10. Fire-and-forget memory extraction from user transcript ────────────
+  // ── 10. Fire-and-forget memory extraction ────────────────────────────────
   void memoryExtractionService.extractFromTurn({
     userId,
     transcript,
@@ -273,9 +345,8 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
 /**
  * POST /api/tablet/speak
  *
- * Synthesize arbitrary short text (e.g. an appointment reminder) with the
- * user's companion voice. No STT / LLM / persistence — pure TTS passthrough
- * so the tablet can proactively speak alerts.
+ * Synthesize arbitrary short text with the user's companion voice.
+ * No STT / LLM / persistence — pure TTS passthrough for proactive alerts.
  */
 router.post("/speak", requireDevice, async (req, res): Promise<void> => {
   const userId = req.deviceUserId!;

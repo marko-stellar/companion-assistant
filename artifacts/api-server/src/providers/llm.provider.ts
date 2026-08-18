@@ -71,8 +71,43 @@ export interface AnalyzeImageResult {
   suggestedQuestion?: string;
 }
 
+// ── Tool-aware response ───────────────────────────────────────────────────────
+
+export interface LLMRespondWithToolsParams extends LLMRespondParams {
+  /**
+   * Tool descriptions injected into the system prompt.
+   * The implementation may use native function-calling APIs (e.g. OpenAI tools)
+   * or rely on text-based parsing of a <tool_call> block — both are valid.
+   */
+  toolsSection: string;
+}
+
+/** LLM returned plain text (no tool call detected). */
+export interface LLMTextResult {
+  type: "text";
+  content: string;
+  usage?: { promptTokens: number; completionTokens: number };
+}
+
+/** LLM wants to invoke a named tool with structured arguments. */
+export interface LLMToolCallResult {
+  type: "tool_call";
+  toolName: string;
+  args: Record<string, unknown>;
+  callId: string;
+  usage?: { promptTokens: number; completionTokens: number };
+}
+
+export type LLMRespondWithToolsResult = LLMTextResult | LLMToolCallResult;
+
 export interface LLMProvider {
   respond(params: LLMRespondParams): Promise<LLMRespondResult>;
+  /**
+   * Respond with optional tool-calling support.
+   * Returns either a text response or a structured tool call.
+   * Implementations that don't support tools should return type: "text".
+   */
+  respondWithTools(params: LLMRespondWithToolsParams): Promise<LLMRespondWithToolsResult>;
   extractMemories(params: ExtractMemoriesParams): Promise<ExtractMemoriesResult>;
   /** Must be called independently from respond() — never in the same request */
   classifySafety(params: ClassifySafetyParams): Promise<ClassifySafetyResult>;

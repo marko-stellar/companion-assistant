@@ -1,5 +1,5 @@
-import { eq, and, inArray } from "drizzle-orm";
-import { db, users, reminders, dndPeriods } from "@workspace/db";
+import { eq, and, inArray, gt, lte } from "drizzle-orm";
+import { db, users, reminders, dndPeriods, temporaryDnd } from "@workspace/db";
 import type { Reminder, DndPeriod, Weekday } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { remindersService } from "../domains/reminders";
@@ -70,6 +70,7 @@ export class AppScheduler {
         this.checkReminders(nowUtc),
         this.checkRoutines(nowUtc),
         this.checkProactivity(nowUtc),
+        this.cleanExpiredTemporaryDnd(nowUtc),
       ]);
     } finally {
       this.isRunning = false;
@@ -237,6 +238,19 @@ export class AppScheduler {
       await routineService.detectDeviations(nowUtc);
     } catch (err) {
       logger.error({ err }, "Error checking routines");
+    }
+  }
+
+  /**
+   * Remove expired temporary DND overrides — cleanup only, no side-effects.
+   * Rows where endsAt < now are stale; new reads in context service ignore
+   * them via the endsAt > now condition, but pruning keeps the table lean.
+   */
+  private async cleanExpiredTemporaryDnd(nowUtc: Date): Promise<void> {
+    try {
+      await db.delete(temporaryDnd).where(lte(temporaryDnd.endsAt, nowUtc));
+    } catch (err) {
+      logger.error({ err }, "Error cleaning expired temporary DND");
     }
   }
 

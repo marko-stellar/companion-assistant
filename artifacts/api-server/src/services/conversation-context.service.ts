@@ -16,13 +16,14 @@
  * Then returns the bounded recent-message window for the message list.
  */
 
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 import {
   db,
   users,
   companions,
   conversationMessages,
   dndPeriods,
+  temporaryDnd,
 } from "@workspace/db";
 import type { Memory } from "@workspace/db";
 import type { Message } from "../providers/llm.provider";
@@ -77,7 +78,8 @@ export class ConversationContextService {
     const timezone = user?.timezone ?? "UTC";
 
     // Parallelise remaining independent DB queries + memory retrieval
-    const [todaySchedule, activeDnd, recentRows, relevantMemories] =
+    const now = new Date();
+    const [todaySchedule, activeDnd, activeTemporaryDnd, recentRows, relevantMemories] =
       await Promise.all([
         scheduleService.getTodayItems(userId),
         db
@@ -85,6 +87,14 @@ export class ConversationContextService {
           .from(dndPeriods)
           .where(
             and(eq(dndPeriods.userId, userId), eq(dndPeriods.isActive, true)),
+          )
+          .limit(1)
+          .then(r => r[0] ?? null),
+        db
+          .select()
+          .from(temporaryDnd)
+          .where(
+            and(eq(temporaryDnd.userId, userId), gt(temporaryDnd.endsAt, now)),
           )
           .limit(1)
           .then(r => r[0] ?? null),
@@ -116,6 +126,7 @@ export class ConversationContextService {
       language,
       todaySchedule,
       activeDnd,
+      activeTemporaryDnd,
       relevantMemories,
     });
 
@@ -128,9 +139,10 @@ export class ConversationContextService {
     language: string;
     todaySchedule: TodayItem[];
     activeDnd: typeof dndPeriods.$inferSelect | null;
+    activeTemporaryDnd: typeof temporaryDnd.$inferSelect | null;
     relevantMemories: Memory[];
   }): string {
-    const { companion, user, language, todaySchedule, activeDnd, relevantMemories } = params;
+    const { companion, user, language, todaySchedule, activeDnd, activeTemporaryDnd, relevantMemories } = params;
     const parts: string[] = [];
 
     // ── 1. Companion identity ──────────────────────────────────────────────
@@ -169,7 +181,13 @@ export class ConversationContextService {
     // ── 4. Today's schedule ───────────────────────────────────────────────
     if (todaySchedule.length > 0) {
       const lines = todaySchedule
-        .map(s => `  • ${s.time}  ${s.title}  (${s.type}${s.done ? ", done" : ""})`)
+        .map(s => {
+          // Include occurrenceId for medication items so tools can reference them
+          const occPart = s.type === "medication" && s.occurrenceId
+            ? `  occurrenceId: ${s.occurrenceId}`
+            : "";
+          return `  • ${s.time}  ${s.title}  (${s.type}${s.done ? ", done" : ""})${occPart}`;
+        })
         .join("\n");
       parts.push(
         `\nTODAY'S SCHEDULE:\n${lines}\nYou may mention these naturally if they come up, but do not read the list aloud unprompted.`,
@@ -181,7 +199,13 @@ export class ConversationContextService {
     }
 
     // ── 5. DND state ──────────────────────────────────────────────────────
-    if (activeDnd) {
+    if (activeTemporaryDnd) {
+      const endsLocal = this.formatLocalTime(activeTemporaryDnd.endsAt, user?.timezone ?? "UTC");
+      parts.push(
+        `\nDO NOT DISTURB (TEMPORARY):\nThe user requested quiet until ${endsLocal}. ` +
+        `Do not initiate proactive conversation. You may still respond fully if spoken to.`,
+      );
+    } else if (activeDnd) {
       parts.push(
         `\nDO NOT DISTURB:\nA quiet period is scheduled from ${activeDnd.startTime} to ${activeDnd.endTime}. Gently acknowledge this if the conversation runs long.`,
       );

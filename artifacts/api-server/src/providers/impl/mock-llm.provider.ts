@@ -5,14 +5,19 @@
  * COMPANION personas (Ana, Mia, Luka, Ivan). Supports Croatian and English.
  * Responses are rotated so repeated turns feel varied.
  *
- * Replace with a real adapter (OpenAI, Anthropic, etc.) once an API key is
- * available — the interface contract is identical.
+ * Tool-calling: the mock performs lightweight keyword detection so that the
+ * full tool → validate → execute → confirm pipeline can be exercised in
+ * development without a real LLM. Replace with a real adapter (OpenAI,
+ * Anthropic, etc.) once an API key is available — the interface is identical.
  */
 
+import { randomUUID } from "crypto";
 import type {
   LLMProvider,
   LLMRespondParams,
   LLMRespondResult,
+  LLMRespondWithToolsParams,
+  LLMRespondWithToolsResult,
   ExtractMemoriesParams,
   ExtractMemoriesResult,
   ClassifySafetyParams,
@@ -119,18 +124,180 @@ function detectCompanionName(systemPrompt: string): string {
   return names.find(n => systemPrompt.includes(`You are ${n}`)) ?? "Ana";
 }
 
+// ── Mock tool-call detection ─────────────────────────────────────────────────
+// Simple keyword heuristics so the full tool pipeline can be tested
+// without a real LLM. A real LLM adapter should use native function calling.
+
+interface MockToolCall {
+  tool: string;
+  args: Record<string, unknown>;
+}
+
+function getTodayLocalDateStr(timezone: string): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+function extractTimeFromText(text: string): string | null {
+  // Match "at HH:MM", "u HH:MM", "u HH", "at Hpm/am", "u NN sati"
+  const patterns = [
+    /\bat\s+(\d{1,2}):(\d{2})\b/i,
+    /\bu\s+(\d{1,2}):(\d{2})\b/i,
+    /\bat\s+(\d{1,2})\s*(am|pm)\b/i,
+    /\b(\d{1,2}):(\d{2})\b/,
+    /\bu\s+(\d{1,2})\s*(?:sati|h)\b/i,
+    /\b(\d{1,2})\s*(am|pm)\b/i,
+  ];
+  for (const re of patterns) {
+    const m = re.exec(text);
+    if (m) {
+      let h = parseInt(m[1]!, 10);
+      const min = m[2] ? parseInt(m[2], 10) : 0;
+      const ampm = m[3]?.toLowerCase();
+      if (ampm === "pm" && h < 12) h += 12;
+      if (ampm === "am" && h === 12) h = 0;
+      return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+    }
+  }
+  return null;
+}
+
+function extractDateFromText(text: string, timezone: string): string | null {
+  const today = getTodayLocalDateStr(timezone);
+  const [y, m, d] = today.split("-").map(Number);
+  const now = new Date();
+
+  // tomorrow / sutra
+  if (/\b(tomorrow|sutra)\b/i.test(text)) {
+    const t = new Date(Date.UTC(y!, (m ?? 1) - 1, (d ?? 1) + 1));
+    return t.toISOString().slice(0, 10);
+  }
+
+  // day names (English + Croatian)
+  const days: Record<string, number> = {
+    sunday: 0, nedjelja: 0, ned: 0,
+    monday: 1, ponedjeljak: 1, pon: 1,
+    tuesday: 2, utorak: 2, uto: 2,
+    wednesday: 3, srijeda: 3, sri: 3,
+    thursday: 4, četvrtak: 4, čet: 4,
+    friday: 5, petak: 5, pet: 5,
+    saturday: 6, subota: 6, sub: 6,
+  };
+  const todayDow = now.getDay();
+  for (const [name, dow] of Object.entries(days)) {
+    if (new RegExp(`\\b${name}\\b`, "i").test(text)) {
+      let diff = dow - todayDow;
+      if (diff <= 0) diff += 7; // always next occurrence
+      const t = new Date(Date.UTC(y!, (m ?? 1) - 1, (d ?? 1) + diff));
+      return t.toISOString().slice(0, 10);
+    }
+  }
+
+  // "today" / "danas" → return today's date
+  if (/\b(today|danas)\b/i.test(text)) return today;
+
+  return null;
+}
+
+function detectToolCall(userText: string, systemPrompt: string, timezone: string): MockToolCall | null {
+  const t = userText.toLowerCase();
+
+  // get_today_schedule
+  if (/što\s+imam|what\s+(do\s+i\s+have|is\s+on|have\s+i|is\s+scheduled)|my\s+schedule|moj\s+raspored|today\s+schedule/i.test(t)) {
+    return { tool: "get_today_schedule", args: {} };
+  }
+
+  // confirm_medication — look for occurrenceId in system prompt
+  const occMatch = /occurrenceId:\s*([0-9a-f-]{36})/i.exec(systemPrompt);
+  if (occMatch && /\b(yes|da|uzeo|uzela|took|taken|jesam)\b/i.test(t)) {
+    return { tool: "confirm_medication", args: { occurrenceId: occMatch[1], response: "YES" } };
+  }
+  if (occMatch && /\b(no|ne|nisam|haven.t|didn.t|not\s+taken)\b/i.test(t)) {
+    return { tool: "confirm_medication", args: { occurrenceId: occMatch[1], response: "NO" } };
+  }
+
+  // set_temporary_dnd
+  if (/\b(ne\s+smetaj|do\s+not\s+disturb|don.t\s+disturb|quiet\s+until|mir\s+do|nemoj\s+me\s+smetati?)\b/i.test(t)) {
+    const time = extractTimeFromText(t) ?? "14:00";
+    return { tool: "set_temporary_dnd", args: { endsAtLocalTime: time } };
+  }
+
+  // create_reminder — keywords
+  if (/\b(podsjeti|remind\s+me|reminder|podsjetnik)\b/i.test(t)) {
+    const time = extractTimeFromText(t);
+    const date = extractDateFromText(t, timezone);
+    if (!time) return null; // ambiguous — let LLM ask
+    const title = userText.replace(/podsjeti\s+me|remind\s+me/i, "").replace(/sutra|tomorrow|u\s+\d.*|at\s+\d.*/i, "").trim().slice(0, 80) || "Reminder";
+
+    const args: Record<string, unknown> = { title, localTime: time };
+    if (date) args.localDate = date;
+    else args.recurrenceDays = []; // will be caught by validation — test path
+    return { tool: "create_reminder", args };
+  }
+
+  // create_appointment
+  if (/\b(zubar|doktor|doctor|dentist|appointment|termin|pregled|posjet)\b/i.test(t)) {
+    const time = extractTimeFromText(t);
+    const date = extractDateFromText(t, timezone);
+    if (!time || !date) return null; // need clarification
+    const title = userText.replace(/u\s+\d.*|at\s+\d.*/i, "").trim().slice(0, 80) || "Appointment";
+    return { tool: "create_appointment", args: { title, localDate: date, localTime: time } };
+  }
+
+  // correct_memory
+  if (/\b(ispravi|correct\s+(my\s+)?memory|zapravo|actually[,\s]+no|ne[,\s]+nije)\b/i.test(t)) {
+    // Extract subject and corrected fact heuristically
+    const subjectMatch = /(?:o|about)\s+(\w+)/i.exec(userText);
+    const subject = subjectMatch?.[1] ?? "unknown";
+    return { tool: "correct_memory", args: { subject, correctedFact: userText } };
+  }
+
+  return null;
+}
+
 // ── Provider ────────────────────────────────────────────────────────────────
 
 export class MockLLMProvider implements LLMProvider {
   async respond({ messages, language }: LLMRespondParams): Promise<LLMRespondResult> {
-    // Small artificial delay to simulate LLM latency
     await new Promise(r => setTimeout(r, 600));
-
     const systemPrompt = messages.find(m => m.role === "system")?.content ?? "";
     const companion = detectCompanionName(systemPrompt);
     const isHR = language === "hr";
-
     return { content: pickResponse(companion, isHR) };
+  }
+
+  async respondWithTools({ messages, language, toolsSection: _ }: LLMRespondWithToolsParams): Promise<LLMRespondWithToolsResult> {
+    await new Promise(r => setTimeout(r, 600));
+
+    const systemPrompt = messages.find(m => m.role === "system")?.content ?? "";
+    const userMessage = messages.filter(m => m.role === "user").at(-1)?.content ?? "";
+
+    // Detect timezone from system prompt ("Their local timezone is Europe/Zagreb")
+    const tzMatch = /timezone is ([A-Za-z/_]+)/.exec(systemPrompt);
+    const timezone = tzMatch?.[1] ?? "UTC";
+
+    const toolCall = detectToolCall(userMessage, systemPrompt, timezone);
+    if (toolCall) {
+      return {
+        type: "tool_call",
+        toolName: toolCall.tool,
+        args: toolCall.args,
+        callId: randomUUID(),
+      };
+    }
+
+    // No tool needed — return conversational text
+    const companion = detectCompanionName(systemPrompt);
+    const isHR = language === "hr";
+    return { type: "text", content: pickResponse(companion, isHR) };
   }
 
   async extractMemories(_params: ExtractMemoriesParams): Promise<ExtractMemoriesResult> {

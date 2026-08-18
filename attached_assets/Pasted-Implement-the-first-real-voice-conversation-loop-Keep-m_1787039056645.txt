@@ -1,0 +1,55 @@
+Implement the first real voice conversation loop. Keep memory, tools and safety minimal for this milestone.
+
+PROVIDER
+Use the existing SpeechProvider and LLMProvider abstractions. Implement initial ElevenLabs adapters for:
+- speech-to-text using a current ElevenLabs speech-to-text model that supports Croatian
+- text-to-speech using a current multilingual ElevenLabs model that supports Croatian
+Do not hard-code model IDs in UI code. Put provider/model configuration server-side in environment/config.
+
+LLM
+Implement one strong general-purpose LLM adapter with:
+- Croatian and English conversation
+- streaming response if the provider/library supports it cleanly
+- provider/model configurable server-side
+If no LLM API key is available, create a mock adapter for local testing.
+
+VOICE FLOW
+1. User presses Talk button.
+2. Browser captures microphone audio.
+3. Audio is sent securely to backend.
+4. Backend transcribes audio.
+5. Backend sends text to conversation engine.
+6. LLM generates reply using selected companion personality.
+7. Backend synthesizes reply audio.
+8. Tablet plays reply.
+9. UI visibly transitions listening -> thinking -> speaking -> idle.
+
+LANGUAGE
+- Use user's preferred language as default.
+- Croatian output must be Croatian, not Serbian/Bosnian substitutions where avoidable.
+- English users receive English.
+- Preserve Latin script for Croatian.
+- Do not translate proper names unnecessarily.
+
+COMPANION PERSONALITY
+Use the four companion configurations seeded earlier. Keep the companion consistent in name, tone and speaking style.
+Companion must not claim to be human. It may naturally describe itself as the user's companion/digital friend.
+
+INTERRUPTION
+If feasible with the selected browser/audio implementation, support stopping current playback when the user presses Talk again. Full low-latency barge-in is a SHOULD for this milestone, not a blocker.
+
+WAKE WORD
+Do not build arbitrary customizable wake words now.
+Create a clean WakeWordProvider interface/placeholder and keep the Talk button fully functional.
+If a reliable fixed wake-word library can be integrated without destabilizing the MVP, use a fixed wake word such as "Companion". Otherwise document it as deferred.
+
+ERROR HANDLING
+Handle microphone denied, transcription failure, LLM failure and TTS failure with senior-friendly UI states.
+
+ACCEPTANCE CRITERIA
+- Croatian user can press Talk, speak Croatian, and hear Croatian response.
+- English user can do the same in English.
+- Ana/Mia/Luka/Ivan produce observably different tone but share the same functional behavior.
+- No provider key appears in browser network payloads or source bundle.
+- Voice failures do not crash the application.
+- Repeated Talk press can at least stop current playback and start a new input cycle.

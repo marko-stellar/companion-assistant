@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
   type ReactNode,
 } from "react";
 import type {
@@ -17,10 +18,15 @@ import {
   clearToken,
   fetchDeviceContext,
   fetchTodayItems,
+  converse,
 } from "@/lib/device-api";
 import { getStrings, getGreeting, type Strings } from "@/lib/i18n";
 
+// ── Types ──────────────────────────────────────────────────────────────────
+
 export type AppState = "loading" | "setup" | "home";
+
+/** Visual state of the ambient orb — drives AmbientOrb + StateLabel. */
 export type CompanionState =
   | "idle"
   | "listening"
@@ -29,23 +35,46 @@ export type CompanionState =
   | "dnd"
   | "offline";
 
+/** Internal voice-conversation phase — drives the real audio state machine. */
+export type VoicePhase = "idle" | "recording" | "uploading" | "playing";
+
+/** Error variants shown as senior-friendly banners below the Talk button. */
+export type VoiceError =
+  | "mic_denied"
+  | "mic_unavailable"
+  | "transcription_empty"
+  | "llm_error"
+  | "network_error";
+
 interface DeviceContextValue {
   appState: AppState;
   ctx: ApiTabletContext | null;
   todayItems: TodayItem[];
+  /** Derived from voicePhase + DND + online state — use for Orb/label display. */
   companionState: CompanionState;
+  voicePhase: VoicePhase;
+  voiceError: VoiceError | null;
+  clearVoiceError: () => void;
   isOnline: boolean;
   t: Strings;
   greeting: string;
-  /** Called after a successful setup — reloads context. */
+  /** Called after a successful setup code entry — reloads context. */
   onSetupComplete: () => void;
-  /** Cycle through idle → listening → thinking → speaking → idle on demand. */
-  activateConversation: () => void;
+  /**
+   * Start a new recording turn (or stop the current one / barge into playback).
+   * idle     → start recording (request mic permission)
+   * recording → stop recording, upload, play reply
+   * uploading → no-op (don't interrupt in-flight request)
+   * playing  → stop playback, start new recording (barge-in)
+   */
+  activateConversation: () => Promise<void>;
 }
 
 const DeviceCtx = createContext<DeviceContextValue | null>(null);
 
-// DND check — handles overnight (endTime < startTime)
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/** DND check — handles overnight spans (endTime < startTime). */
 function isDndActive(dnd: ApiTabletContext["dnd"] | undefined | null): boolean {
   if (!dnd || !dnd.isActive) return false;
   const now = new Date();
@@ -54,32 +83,68 @@ function isDndActive(dnd: ApiTabletContext["dnd"] | undefined | null): boolean {
   const startMins = sh * 60 + sm;
   const endMins = eh * 60 + em;
   const nowMins = now.getHours() * 60 + now.getMinutes();
-
   if (endMins < startMins) {
-    // Overnight DND — e.g. 22:00–08:00
-    return nowMins >= startMins || nowMins < endMins;
+    return nowMins >= startMins || nowMins < endMins; // overnight
   }
   return nowMins >= startMins && nowMins < endMins;
 }
 
-// Conversation sequence timing (ms)
-const SEQ: [CompanionState, number][] = [
-  ["listening", 3000],
-  ["thinking", 2500],
-  ["speaking", 3500],
-  ["idle", 0],
-];
+/** Pick the best audio MIME type supported by this browser's MediaRecorder. */
+function getSupportedMimeType(): string {
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "audio/mp4",
+  ];
+  return candidates.find((t) => MediaRecorder.isTypeSupported(t)) ?? "audio/webm";
+}
+
+/** Read a Blob as a base64-encoded string (without the data-URL prefix). */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]); // strip "data:<mime>;base64,"
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ── Provider ───────────────────────────────────────────────────────────────
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
   const [appState, setAppState] = useState<AppState>("loading");
   const [ctx, setCtx] = useState<ApiTabletContext | null>(null);
   const [todayItems, setTodayItems] = useState<TodayItem[]>([]);
-  const [companionState, setCompanionState] =
-    useState<CompanionState>("idle");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const seqTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>("idle");
+  const [voiceError, setVoiceError] = useState<VoiceError | null>(null);
 
-  // Init: configure auth and attempt to validate any stored token
+  // Audio resource refs — not state, to avoid triggering re-renders
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
+  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // Derive CompanionState — DND and offline take precedence over voice phase
+  const companionState = useMemo((): CompanionState => {
+    if (!isOnline) return "offline";
+    if (isDndActive(ctx?.dnd)) return "dnd";
+    switch (voicePhase) {
+      case "recording": return "listening";
+      case "uploading": return "thinking";
+      case "playing":   return "speaking";
+      default:          return "idle";
+    }
+  }, [voicePhase, isOnline, ctx]);
+
+  // ── Auth init + token validation ─────────────────────────────────────────
   useEffect(() => {
     initDeviceAuth();
 
@@ -112,17 +177,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Reflect DND state in companionState whenever ctx changes
-  useEffect(() => {
-    if (appState !== "home" || !ctx) return;
-    if (isDndActive(ctx.dnd) && companionState === "idle") {
-      setCompanionState("dnd");
-    } else if (!isDndActive(ctx.dnd) && companionState === "dnd") {
-      setCompanionState("idle");
-    }
-  }, [ctx, appState]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Online / offline events
+  // ── Online / offline ──────────────────────────────────────────────────────
   useEffect(() => {
     const online = () => setIsOnline(true);
     const offline = () => setIsOnline(false);
@@ -133,6 +188,10 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("offline", offline);
     };
   }, []);
+
+  // ── Callbacks ─────────────────────────────────────────────────────────────
+
+  const clearVoiceError = useCallback(() => setVoiceError(null), []);
 
   const onSetupComplete = useCallback(() => {
     let cancelled = false;
@@ -149,24 +208,159 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const activateConversation = useCallback(() => {
-    if (companionState !== "idle") return;
-    if (seqTimer.current) clearTimeout(seqTimer.current);
+  const clearAutoStopTimer = useCallback(() => {
+    if (autoStopTimerRef.current) {
+      clearTimeout(autoStopTimerRef.current);
+      autoStopTimerRef.current = null;
+    }
+  }, []);
 
-    let step = 0;
-    const advance = () => {
-      const [state, delay] = SEQ[step];
-      setCompanionState(state);
-      if (delay > 0) {
-        seqTimer.current = setTimeout(() => {
-          step++;
-          advance();
-        }, delay);
+  const activateConversation = useCallback(async () => {
+    setVoiceError(null);
+
+    // Guard: no conversation while offline or DND
+    if (!isOnline || isDndActive(ctx?.dnd)) return;
+
+    // ── Barge-in: stop current playback ──────────────────────────────────
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.src = "";
+      audioPlayerRef.current = null;
+    }
+
+    clearAutoStopTimer();
+
+    // ── Toggle off: if recording → stop and send ──────────────────────────
+    if (voicePhase === "recording" && recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+      return;
+    }
+
+    // ── Uploading → ignore (in-flight, can't safely interrupt) ───────────
+    if (voicePhase === "uploading") return;
+
+    // ── START RECORDING ───────────────────────────────────────────────────
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      if (
+        err instanceof DOMException &&
+        (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")
+      ) {
+        setVoiceError("mic_denied");
+      } else {
+        setVoiceError("mic_unavailable");
+      }
+      return;
+    }
+
+    streamRef.current = stream;
+    chunksRef.current = [];
+    setVoicePhase("recording");
+
+    const mimeType = getSupportedMimeType();
+    const recorder = new MediaRecorder(stream, { mimeType });
+    recorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      // Release the microphone immediately
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      clearAutoStopTimer();
+
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      chunksRef.current = [];
+
+      // Too small to contain real speech — likely an accidental tap
+      if (blob.size < 500) {
+        setVoicePhase("idle");
+        setVoiceError("transcription_empty");
+        return;
+      }
+
+      setVoicePhase("uploading");
+
+      let base64: string;
+      try {
+        base64 = await blobToBase64(blob);
+      } catch {
+        setVoicePhase("idle");
+        setVoiceError("network_error");
+        return;
+      }
+
+      try {
+        const response = await converse({
+          audio: base64,
+          mimeType,
+          conversationId: conversationIdRef.current ?? undefined,
+        });
+
+        conversationIdRef.current = response.conversationId;
+
+        // TTS failed server-side — show idle (text reply was still saved to DB)
+        if (!response.audio) {
+          setVoicePhase("idle");
+          return;
+        }
+
+        // ── PLAY REPLY ──────────────────────────────────────────────────
+        setVoicePhase("playing");
+
+        const audioUrl = `data:${response.mimeType};base64,${response.audio}`;
+        const audio = new Audio(audioUrl);
+        audioPlayerRef.current = audio;
+
+        audio.onended = () => {
+          audioPlayerRef.current = null;
+          setVoicePhase("idle");
+        };
+        audio.onerror = () => {
+          audioPlayerRef.current = null;
+          setVoicePhase("idle");
+        };
+
+        await audio.play().catch(() => {
+          // Browser autoplay policy blocked playback — fall back gracefully
+          audioPlayerRef.current = null;
+          setVoicePhase("idle");
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg === "transcription_empty") {
+          setVoiceError("transcription_empty");
+        } else if (
+          msg.includes("fetch") ||
+          msg.includes("network") ||
+          msg.includes("NetworkError") ||
+          msg.includes("Failed to fetch")
+        ) {
+          setVoiceError("network_error");
+        } else {
+          setVoiceError("llm_error");
+        }
+        setVoicePhase("idle");
       }
     };
-    advance();
-  }, [companionState]);
 
+    recorder.start(100); // collect chunks every 100 ms
+
+    // Auto-stop after 30 s if the user forgets to tap again
+    autoStopTimerRef.current = setTimeout(() => {
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.stop();
+      }
+    }, 30_000);
+  }, [voicePhase, isOnline, ctx, clearAutoStopTimer]);
+
+  // ── Derived display values ────────────────────────────────────────────────
   const lang = ctx?.user?.language;
   const t = getStrings(lang);
   const name =
@@ -183,6 +377,9 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         ctx,
         todayItems,
         companionState,
+        voicePhase,
+        voiceError,
+        clearVoiceError,
         isOnline,
         t,
         greeting,

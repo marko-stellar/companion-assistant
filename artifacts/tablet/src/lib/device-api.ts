@@ -62,3 +62,53 @@ export async function fetchTodayItems() {
     return { items: [] };
   }
 }
+
+// ── Voice conversation ──────────────────────────────────────────────────────
+
+export interface ConverseRequest {
+  /** Base64-encoded audio blob (webm/ogg/mp4 depending on browser support). */
+  audio: string;
+  /** MIME type of the audio blob, e.g. "audio/webm;codecs=opus". */
+  mimeType: string;
+  /** Persist context across turns. Pass null on first turn of a new session. */
+  conversationId?: string;
+}
+
+export interface ConverseResponse {
+  /** What the user actually said (from STT). */
+  transcript: string;
+  /** The companion's text reply (from LLM). */
+  reply: string;
+  /** Base64-encoded audio of the reply (from TTS). Empty string if TTS failed. */
+  audio: string;
+  /** MIME type of the reply audio, e.g. "audio/mpeg" or "audio/wav". */
+  mimeType: string;
+  /** Conversation session ID — pass back on subsequent turns. */
+  conversationId: string;
+}
+
+/**
+ * Send recorded audio to the backend conversation route.
+ * Returns the companion's audio reply plus the transcript and text.
+ * Throws on network errors or non-2xx responses.
+ */
+export async function converse(req: ConverseRequest): Promise<ConverseResponse> {
+  const token = getStoredToken();
+  const res = await fetch("/api/tablet/converse", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(req),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(
+      typeof data.error === "string" ? data.error : "Conversation request failed",
+    );
+  }
+
+  return res.json() as Promise<ConverseResponse>;
+}

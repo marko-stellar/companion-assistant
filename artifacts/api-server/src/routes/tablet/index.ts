@@ -3,6 +3,7 @@ import { Router } from "express";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { db, deviceSetupCodes, deviceSessions, users, companions, dndPeriods } from "@workspace/db";
 import { requireDevice } from "../../middlewares/requireDevice";
+import conversationRouter from "./conversation";
 
 /**
  * Tablet API route group — /api/tablet/*
@@ -164,5 +165,8 @@ router.get("/today", requireDevice, async (req, res): Promise<void> => {
 
   res.json({ items });
 });
+
+// Voice conversation loop — POST /tablet/converse
+router.use(conversationRouter);
 
 export default router;

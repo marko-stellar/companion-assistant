@@ -3,3 +3,5 @@ export type { SpeechProvider, TranscribeParams, TranscribeResult, SynthesizePara
 export type { SearchProvider, SearchWebParams, SearchWebResult, SearchTrustedNewsParams, SearchTrustedNewsResult, SearchResult } from "./search.provider";
 export type { NotificationProvider, SendSMSParams, SendSMSResult } from "./notification.provider";
 export type { StorageProvider, UploadParams, UploadResult, GetSignedUrlParams, GetSignedUrlResult, DeleteParams, DeleteResult } from "./storage.provider";
+export type { WakeWordProvider, WakeWordEvent } from "./wake-word.provider";
+export { NoOpWakeWordProvider } from "./wake-word.provider";

@@ -16,6 +16,7 @@ const strings = {
     todayLabel: "Danas",
     noItemsToday: "Ništa za danas.",
     talkButton: "Razgovaraj",
+    stopListening: "Zaustavi",
     reminder: "Podsjetnik",
     appointment: "Termin",
     setupTitle: "Postavljanje uređaja",
@@ -26,6 +27,12 @@ const strings = {
     setupError: "Nevažeći ili istekli kôd. Pokušajte ponovo.",
     connecting: "Spajanje…",
     lastSeen: "Zadnji put viđen",
+    // Voice error messages — senior-friendly, non-alarming
+    errorMicDenied: "Molim dozvolite pristup mikrofonu u postavkama.",
+    errorMicUnavailable: "Mikrofon nije dostupan. Provjerite uređaj.",
+    errorTranscriptionEmpty: "Nisam razumio. Pokušajte ponovo.",
+    errorLlm: "Trenutno nedostupno. Pokušajte za koji trenutak.",
+    errorNetwork: "Nema veze s internetom.",
   },
   en: {
     goodMorning: "Good morning",
@@ -42,6 +49,7 @@ const strings = {
     todayLabel: "Today",
     noItemsToday: "Nothing scheduled for today.",
     talkButton: "Talk to me",
+    stopListening: "Stop",
     reminder: "Reminder",
     appointment: "Appointment",
     setupTitle: "Device Setup",
@@ -52,6 +60,12 @@ const strings = {
     setupError: "Invalid or expired code. Please try again.",
     connecting: "Connecting…",
     lastSeen: "Last seen",
+    // Voice error messages — senior-friendly, non-alarming
+    errorMicDenied: "Please allow microphone access in your settings.",
+    errorMicUnavailable: "Microphone not available. Please check your device.",
+    errorTranscriptionEmpty: "Didn't catch that. Please try again.",
+    errorLlm: "Unavailable right now. Please try again in a moment.",
+    errorNetwork: "No internet connection.",
   },
 } as const;
 

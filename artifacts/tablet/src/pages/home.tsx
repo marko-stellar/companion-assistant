@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { useDevice } from "@/contexts/device-context";
+import { useDevice, type VoiceError } from "@/contexts/device-context";
 import { AmbientOrb } from "@/components/ambient-orb";
 import type { TodayItem } from "@workspace/api-client-react";
+import type { Strings } from "@/lib/i18n";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function useOrientation(): "portrait" | "landscape" {
   const [o, setO] = useState<"portrait" | "landscape">(
-    window.innerWidth > window.innerHeight ? "landscape" : "portrait"
+    window.innerWidth > window.innerHeight ? "landscape" : "portrait",
   );
   useEffect(() => {
     const update = () =>
@@ -27,12 +28,31 @@ function useGreetingRefresh(greeting: string): string {
   return cur;
 }
 
+function getVoiceErrorMessage(error: VoiceError, t: Strings): string {
+  switch (error) {
+    case "mic_denied":          return t.errorMicDenied;
+    case "mic_unavailable":     return t.errorMicUnavailable;
+    case "transcription_empty": return t.errorTranscriptionEmpty;
+    case "llm_error":           return t.errorLlm;
+    case "network_error":       return t.errorNetwork;
+  }
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function TodayList({ items, t }: { items: TodayItem[]; t: { todayLabel: string; noItemsToday: string; reminder: string; appointment: string } }) {
+function TodayList({
+  items,
+  t,
+}: {
+  items: TodayItem[];
+  t: { todayLabel: string; noItemsToday: string; reminder: string; appointment: string };
+}) {
   if (!items.length) {
     return (
-      <p className="text-center text-base" style={{ color: "rgba(200,175,145,0.45)" }}>
+      <p
+        className="text-center text-base"
+        style={{ color: "rgba(200,175,145,0.45)" }}
+      >
         {t.noItemsToday}
       </p>
     );
@@ -50,14 +70,12 @@ function TodayList({ items, t }: { items: TodayItem[]; t: { todayLabel: string; 
             opacity: item.done ? 0.4 : 1,
           }}
         >
-          {/* Time */}
           <span
             className="text-sm font-mono shrink-0"
             style={{ color: "rgba(200,155,90,0.85)", minWidth: 40 }}
           >
             {item.time}
           </span>
-          {/* Type dot */}
           <span
             className="h-2 w-2 rounded-full shrink-0"
             style={{
@@ -67,7 +85,6 @@ function TodayList({ items, t }: { items: TodayItem[]; t: { todayLabel: string; 
                   : "rgba(180,130,90,0.8)",
             }}
           />
-          {/* Title */}
           <span
             className="text-base flex-1 truncate"
             style={{ color: "rgba(240,220,195,0.85)" }}
@@ -80,14 +97,21 @@ function TodayList({ items, t }: { items: TodayItem[]; t: { todayLabel: string; 
   );
 }
 
-function StateLabel({ companionState, t }: { companionState: string; t: { listening: string; thinking: string; speaking: string } }) {
-  if (!["listening", "thinking", "speaking"].includes(companionState)) return null;
+function StateLabel({
+  companionState,
+  t,
+}: {
+  companionState: string;
+  t: { listening: string; thinking: string; speaking: string };
+}) {
+  if (!["listening", "thinking", "speaking"].includes(companionState))
+    return null;
   const label =
     companionState === "listening"
       ? t.listening
       : companionState === "thinking"
-      ? t.thinking
-      : t.speaking;
+        ? t.thinking
+        : t.speaking;
   return (
     <p
       className="text-base tracking-wide animate-pulse"
@@ -108,7 +132,6 @@ function DndOverlay({ t }: { t: { dndTitle: string; dndSubtitle: string } }) {
       className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-[inherit]"
       style={{ background: "rgba(14,11,8,0.88)", zIndex: 20 }}
     >
-      {/* Moon icon */}
       <svg
         width="52"
         height="52"
@@ -123,7 +146,11 @@ function DndOverlay({ t }: { t: { dndTitle: string; dndSubtitle: string } }) {
       </svg>
       <p
         className="text-2xl"
-        style={{ color: "rgba(200,190,220,0.85)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}
+        style={{
+          color: "rgba(200,190,220,0.85)",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: "italic",
+        }}
       >
         {t.dndTitle}
       </p>
@@ -134,7 +161,11 @@ function DndOverlay({ t }: { t: { dndTitle: string; dndSubtitle: string } }) {
   );
 }
 
-function OfflineOverlay({ t }: { t: { offlineTitle: string; offlineSubtitle: string } }) {
+function OfflineOverlay({
+  t,
+}: {
+  t: { offlineTitle: string; offlineSubtitle: string };
+}) {
   return (
     <div
       className="fixed inset-0 flex flex-col items-center justify-center gap-4"
@@ -160,7 +191,11 @@ function OfflineOverlay({ t }: { t: { offlineTitle: string; offlineSubtitle: str
       </svg>
       <p
         className="text-2xl"
-        style={{ color: "rgba(240,215,185,0.85)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}
+        style={{
+          color: "rgba(240,215,185,0.85)",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: "italic",
+        }}
       >
         {t.offlineTitle}
       </p>
@@ -171,18 +206,143 @@ function OfflineOverlay({ t }: { t: { offlineTitle: string; offlineSubtitle: str
   );
 }
 
+/** Gentle error banner displayed below the Talk button. Auto-dismisses after 5 s. */
+function VoiceErrorBanner({
+  error,
+  t,
+  onDismiss,
+}: {
+  error: VoiceError;
+  t: Strings;
+  onDismiss: () => void;
+}) {
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 5_000);
+    return () => clearTimeout(timer);
+  }, [error, onDismiss]);
+
+  return (
+    <div
+      role="alert"
+      aria-live="polite"
+      className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-center text-sm"
+      style={{
+        background: "rgba(180,80,60,0.12)",
+        border: "1px solid rgba(200,80,60,0.25)",
+        color: "rgba(240,190,160,0.85)",
+      }}
+    >
+      {/* Gentle warning dot */}
+      <span
+        className="h-2 w-2 rounded-full shrink-0"
+        style={{ background: "rgba(220,130,80,0.8)" }}
+      />
+      {getVoiceErrorMessage(error, t)}
+    </div>
+  );
+}
+
+/** Talk button label and styles — changes based on voice phase. */
+function TalkButton({
+  voicePhase,
+  isDnd,
+  t,
+  onClick,
+}: {
+  voicePhase: "idle" | "recording" | "uploading" | "playing";
+  isDnd: boolean;
+  t: Strings;
+  onClick: () => void;
+}) {
+  const isRecording = voicePhase === "recording";
+  const isUploading = voicePhase === "uploading";
+  const isDisabled = isDnd || isUploading;
+
+  // Recording: amber-red pulse ring to signal "mic is live"
+  const buttonBg = isDnd
+    ? "rgba(180,130,90,0.15)"
+    : isRecording
+      ? "rgba(200,80,60,0.75)"
+      : isUploading
+        ? "rgba(180,130,90,0.3)"
+        : "rgba(180,130,90,0.82)";
+
+  const buttonColor = isDnd || isUploading
+    ? "rgba(240,210,170,0.3)"
+    : "rgba(255,240,215,0.95)";
+
+  const label = isRecording
+    ? t.stopListening
+    : isUploading
+      ? "…"
+      : t.talkButton;
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={isDisabled}
+      className="w-full rounded-2xl py-7 text-2xl tracking-wide transition-all active:scale-[0.97]"
+      style={{
+        background: buttonBg,
+        color: buttonColor,
+        border: isRecording ? "2px solid rgba(220,100,70,0.5)" : "none",
+        cursor: isDisabled ? "not-allowed" : "pointer",
+        fontFamily: "Inter, sans-serif",
+        fontWeight: 500,
+        letterSpacing: "0.04em",
+        boxShadow:
+          isDisabled || isUploading
+            ? "none"
+            : isRecording
+              ? "0 4px 40px rgba(200,80,60,0.3)"
+              : "0 4px 40px rgba(180,130,90,0.25)",
+        // Pulse animation while recording
+        animation: isRecording ? "pulse 1.5s ease-in-out infinite" : "none",
+      }}
+      aria-label={label}
+      aria-pressed={isRecording}
+    >
+      {isRecording ? (
+        <span className="flex items-center justify-center gap-2">
+          {/* Live mic indicator */}
+          <span
+            className="h-3 w-3 rounded-full"
+            style={{ background: "rgba(255,100,70,0.9)" }}
+          />
+          {label}
+        </span>
+      ) : (
+        label
+      )}
+    </button>
+  );
+}
+
 // ── Main Home Page ─────────────────────────────────────────────────────────
 
 export function HomePage() {
-  const { ctx, todayItems, companionState, isOnline, t, greeting, activateConversation } =
-    useDevice();
+  const {
+    ctx,
+    todayItems,
+    companionState,
+    voicePhase,
+    voiceError,
+    clearVoiceError,
+    isOnline,
+    t,
+    greeting,
+    activateConversation,
+  } = useDevice();
 
   const orientation = useOrientation();
   const liveGreeting = useGreetingRefresh(greeting);
   const companionName = ctx?.companion?.name ?? "Companion";
   const isDnd = companionState === "dnd";
-  const isActive = ["listening", "thinking", "speaking"].includes(companionState);
   const orbSize = orientation === "landscape" ? 220 : 240;
+
+  const handleTalkPress = () => {
+    void activateConversation();
+  };
 
   return (
     <div
@@ -193,9 +353,9 @@ export function HomePage() {
       {!isOnline && <OfflineOverlay t={t} />}
 
       {orientation === "portrait" ? (
-        // ── Portrait layout ─────────────────────────────────
+        // ── Portrait layout ──────────────────────────────────────────────
         <div className="flex flex-col min-h-screen px-6 py-8 gap-6">
-          {/* Header: greeting */}
+          {/* Header: companion name + greeting */}
           <div className="flex flex-col gap-1">
             <p
               className="text-sm tracking-[0.2em] uppercase"
@@ -217,14 +377,21 @@ export function HomePage() {
 
           {/* Orb + state label */}
           <div className="flex flex-col items-center gap-4 flex-1 justify-center relative">
-            {isDnd && (
+            {isDnd ? (
               <div className="relative" style={{ borderRadius: "50%" }}>
-                <AmbientOrb state={companionState} size={orbSize} companionName={companionName} />
+                <AmbientOrb
+                  state={companionState}
+                  size={orbSize}
+                  companionName={companionName}
+                />
                 <DndOverlay t={t} />
               </div>
-            )}
-            {!isDnd && (
-              <AmbientOrb state={companionState} size={orbSize} companionName={companionName} />
+            ) : (
+              <AmbientOrb
+                state={companionState}
+                size={orbSize}
+                companionName={companionName}
+              />
             )}
             <StateLabel companionState={companionState} t={t} />
           </div>
@@ -240,37 +407,25 @@ export function HomePage() {
             <TodayList items={todayItems} t={t} />
           </div>
 
-          {/* TALK button */}
-          <button
-            onClick={activateConversation}
-            disabled={isDnd || isActive}
-            className="w-full rounded-2xl py-7 text-2xl tracking-wide transition-all active:scale-[0.97]"
-            style={{
-              background:
-                isDnd || isActive
-                  ? "rgba(180,130,90,0.15)"
-                  : "rgba(180,130,90,0.82)",
-              color:
-                isDnd || isActive
-                  ? "rgba(240,210,170,0.3)"
-                  : "rgba(255,240,215,0.95)",
-              border: "none",
-              cursor: isDnd || isActive ? "not-allowed" : "pointer",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              letterSpacing: "0.04em",
-              boxShadow:
-                isDnd || isActive
-                  ? "none"
-                  : "0 4px 40px rgba(180,130,90,0.25)",
-            }}
-            aria-label={t.talkButton}
-          >
-            {isActive ? <StateLabel companionState={companionState} t={t} /> : t.talkButton}
-          </button>
+          {/* Talk button + error banner */}
+          <div className="flex flex-col gap-3">
+            {voiceError && (
+              <VoiceErrorBanner
+                error={voiceError}
+                t={t}
+                onDismiss={clearVoiceError}
+              />
+            )}
+            <TalkButton
+              voicePhase={voicePhase}
+              isDnd={isDnd}
+              t={t}
+              onClick={handleTalkPress}
+            />
+          </div>
         </div>
       ) : (
-        // ── Landscape layout ────────────────────────────────
+        // ── Landscape layout ─────────────────────────────────────────────
         <div className="flex min-h-screen items-stretch">
           {/* Left: greeting + today */}
           <div
@@ -313,48 +468,43 @@ export function HomePage() {
           >
             {isDnd ? (
               <div className="relative" style={{ borderRadius: "50%" }}>
-                <AmbientOrb state={companionState} size={orbSize} companionName={companionName} />
+                <AmbientOrb
+                  state={companionState}
+                  size={orbSize}
+                  companionName={companionName}
+                />
                 <DndOverlay t={t} />
               </div>
             ) : (
-              <AmbientOrb state={companionState} size={orbSize} companionName={companionName} />
+              <AmbientOrb
+                state={companionState}
+                size={orbSize}
+                companionName={companionName}
+              />
             )}
             <StateLabel companionState={companionState} t={t} />
           </div>
 
-          {/* Right: TALK button */}
+          {/* Right: Talk button + error */}
           <div
-            className="flex flex-col items-center justify-center px-8"
+            className="flex flex-col items-center justify-center gap-3 px-8"
             style={{ width: "36%" }}
           >
-            <button
-              onClick={activateConversation}
-              disabled={isDnd || isActive}
-              className="w-full rounded-2xl py-8 text-2xl tracking-wide transition-all active:scale-[0.97]"
-              style={{
-                background:
-                  isDnd || isActive
-                    ? "rgba(180,130,90,0.15)"
-                    : "rgba(180,130,90,0.82)",
-                color:
-                  isDnd || isActive
-                    ? "rgba(240,210,170,0.3)"
-                    : "rgba(255,240,215,0.95)",
-                border: "none",
-                cursor: isDnd || isActive ? "not-allowed" : "pointer",
-                fontFamily: "Inter, sans-serif",
-                fontWeight: 500,
-                letterSpacing: "0.04em",
-                maxWidth: 280,
-                boxShadow:
-                  isDnd || isActive
-                    ? "none"
-                    : "0 4px 40px rgba(180,130,90,0.25)",
-              }}
-              aria-label={t.talkButton}
-            >
-              {t.talkButton}
-            </button>
+            {voiceError && (
+              <VoiceErrorBanner
+                error={voiceError}
+                t={t}
+                onDismiss={clearVoiceError}
+              />
+            )}
+            <div style={{ width: "100%", maxWidth: 280 }}>
+              <TalkButton
+                voicePhase={voicePhase}
+                isDnd={isDnd}
+                t={t}
+                onClick={handleTalkPress}
+              />
+            </div>
           </div>
         </div>
       )}

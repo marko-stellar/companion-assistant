@@ -4,6 +4,7 @@ import usersRouter from "./users";
 import companionsRouter from "./companions";
 import deviceRouter from "./device";
 import conversationsRouter from "./conversations";
+import memoriesRouter from "./memories";
 
 /**
  * Admin API route group — /api/admin/*
@@ -22,5 +23,6 @@ router.use(companionsRouter); // also handles /dashboard
 router.use(usersRouter);
 router.use(deviceRouter);
 router.use(conversationsRouter);
+router.use(memoriesRouter);
 
 export default router;

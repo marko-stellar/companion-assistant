@@ -10,8 +10,9 @@ import { eq, desc, and } from "drizzle-orm";
  * Memory domain — structured long-term knowledge about the user.
  * Completely separate from conversation transcripts (conversation_messages).
  *
- * Semantic vector search requires pgvector. That path is stubbed here
- * and will be implemented when LLMProvider is wired up.
+ * For full memory operations (extraction, retrieval, correction) see:
+ *   - services/memory-extraction.service.ts
+ *   - services/memory-retrieval.service.ts
  */
 export class MemoryService {
   async create(data: InsertMemory): Promise<Memory> {
@@ -24,7 +25,7 @@ export class MemoryService {
       .select()
       .from(memories)
       .where(and(eq(memories.userId, userId), eq(memories.isActive, true)))
-      .orderBy(desc(memories.importance), desc(memories.createdAt))
+      .orderBy(desc(memories.confidence), desc(memories.createdAt))
       .limit(limit);
   }
 
@@ -33,18 +34,6 @@ export class MemoryService {
       .update(memories)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(memories.id, id));
-  }
-
-  /**
-   * Semantic similarity search via pgvector.
-   * TODO: implement when LLMProvider embedding is wired.
-   */
-  async searchSimilar(
-    _userId: string,
-    _embedding: number[],
-    _limit = 5,
-  ): Promise<Memory[]> {
-    throw new Error("Vector search not yet implemented — requires LLMProvider");
   }
 }
 

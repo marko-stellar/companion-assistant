@@ -5,10 +5,12 @@
  *   1. Decode and transcribe audio (STT)
  *   2. Get or create a conversation session
  *   3. Build a bounded context window via ConversationContextService
+ *      (includes companion identity, user profile, schedule, DND, retrieved memories)
  *   4. Generate a reply via LLMProvider
  *   5. Synthesize audio via SpeechProvider (TTS)
  *   6. Persist both messages with metadata (latency, language, model)
  *   7. Increment conversation message_count; fire-and-forget summary check
+ *   8. Fire-and-forget memory extraction from user transcript
  *
  * Privacy: transcript content is NEVER written to server logs.
  * Only metadata (lengths, latencies, language) is logged.
@@ -31,6 +33,7 @@ import {
 } from "../../providers/registry";
 import { conversationContextService } from "../../services/conversation-context.service";
 import { conversationSummaryService } from "../../services/conversation-summary.service";
+import { memoryExtractionService } from "../../services/memory-extraction.service";
 
 const router = Router();
 
@@ -118,13 +121,14 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     convId = conv.id;
   }
 
-  // ── 5. Build bounded context window ──────────────────────────────────────
+  // ── 5. Build bounded context window (with retrieved memories) ────────────
   const { systemPrompt, recentMessages } =
     await conversationContextService.buildContext({
       userId,
       companion,
       conversationId: convId,
       language: effectiveLang,
+      userTranscript: transcript,
     });
 
   const llmMessages = [
@@ -176,7 +180,6 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     replyAudioBuffer = synthesized.audioBuffer;
     replyMimeType = synthesized.mimeType;
   } catch (err) {
-    // TTS failure is non-fatal — conversation is saved, audio is empty
     req.log.error({ err }, "TTS failed — returning text-only response");
   }
 
@@ -184,38 +187,41 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
   const totalLatencyMs = Date.now() - routeStart;
 
   // ── 8. Persist messages with metadata ─────────────────────────────────────
-  // Privacy: content is stored in the DB but NEVER written to log output.
+  // Privacy: content stored in DB only — NEVER written to log output.
   const sttModel = process.env.ELEVENLABS_STT_MODEL ?? "scribe_v1";
   const ttsModel = process.env.ELEVENLABS_TTS_MODEL ?? "eleven_multilingual_v2";
 
-  await db.insert(conversationMessages).values([
-    {
-      conversationId: convId,
-      role: "user" as const,
-      content: transcript,
-      language: effectiveLang,
-      latencyMs: sttLatencyMs,
-      providerMeta: { sttModel, sttLatencyMs },
-    },
-    {
-      conversationId: convId,
-      role: "assistant" as const,
-      content: reply,
-      language: effectiveLang,
-      latencyMs: totalLatencyMs,
-      providerMeta: {
-        sttModel,
-        ttsModel,
-        voiceId,
-        sttLatencyMs,
-        llmLatencyMs,
-        ttsLatencyMs,
-        ...(tokenUsage ? { tokens: tokenUsage } : {}),
+  const [userMsg, assistantMsg] = await db
+    .insert(conversationMessages)
+    .values([
+      {
+        conversationId: convId,
+        role: "user" as const,
+        content: transcript,
+        language: effectiveLang,
+        latencyMs: sttLatencyMs,
+        providerMeta: { sttModel, sttLatencyMs },
       },
-    },
-  ]);
+      {
+        conversationId: convId,
+        role: "assistant" as const,
+        content: reply,
+        language: effectiveLang,
+        latencyMs: totalLatencyMs,
+        providerMeta: {
+          sttModel,
+          ttsModel,
+          voiceId,
+          sttLatencyMs,
+          llmLatencyMs,
+          ttsLatencyMs,
+          ...(tokenUsage ? { tokens: tokenUsage } : {}),
+        },
+      },
+    ])
+    .returning({ id: conversationMessages.id });
 
-  // ── 9. Increment message count; fire-and-forget summary ───────────────────
+  // ── 9. Update message_count; fire-and-forget summary ─────────────────────
   const [updated] = await db
     .update(conversations)
     .set({
@@ -225,13 +231,21 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     .where(eq(conversations.id, convId))
     .returning({ messageCount: conversations.messageCount });
 
-  // Fire-and-forget: errors are logged inside the service, never propagated
   void conversationSummaryService.maybeSummarize(
     convId,
     updated?.messageCount ?? 0,
   );
 
-  // ── 10. Privacy-safe log ──────────────────────────────────────────────────
+  // ── 10. Fire-and-forget memory extraction from user transcript ────────────
+  void memoryExtractionService.extractFromTurn({
+    userId,
+    transcript,
+    conversationId: convId,
+    messageId: userMsg?.id,
+    language: effectiveLang,
+  });
+
+  // ── 11. Privacy-safe log ──────────────────────────────────────────────────
   req.log.info(
     {
       userId,
@@ -241,7 +255,6 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
       llmLatencyMs,
       ttsLatencyMs,
       totalLatencyMs,
-      // Lengths only — never log transcript content
       transcriptLen: transcript.length,
       replyLen: reply.length,
     },

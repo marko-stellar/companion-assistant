@@ -10,7 +10,7 @@
  *   3. Language instruction (Croatian or English)
  *   4. Today's reminders and appointments (if any)
  *   5. DND state (if active)
- *   6. [Placeholder] Relevant retrieved memories
+ *   6. Relevant retrieved memories (top-k via semantic search or recency fallback)
  *   7. Behavioural rules
  *
  * Then returns the bounded recent-message window for the message list.
@@ -26,7 +26,9 @@ import {
   appointments,
   dndPeriods,
 } from "@workspace/db";
+import type { Memory } from "@workspace/db";
 import type { Message } from "../providers/llm.provider";
+import { memoryRetrievalService } from "./memory-retrieval.service";
 
 const CONTEXT_WINDOW = parseInt(
   process.env.CONVERSATION_CONTEXT_WINDOW ?? "10",
@@ -51,6 +53,7 @@ export class ConversationContextService {
    * @param companion      — companion row (may be null if unassigned)
    * @param conversationId — current session ID (used to load recent messages)
    * @param language       — effective language for this turn ("hr" | "en")
+   * @param userTranscript — current user message (used for memory retrieval query)
    * @param maxMessages    — max recent messages to include (defaults to env var)
    */
   async buildContext(params: {
@@ -58,6 +61,7 @@ export class ConversationContextService {
     companion: typeof companions.$inferSelect | null;
     conversationId: string;
     language: string;
+    userTranscript?: string;
     maxMessages?: number;
   }): Promise<ConversationContext> {
     const {
@@ -65,30 +69,44 @@ export class ConversationContextService {
       companion,
       conversationId,
       language,
+      userTranscript,
       maxMessages = CONTEXT_WINDOW,
     } = params;
 
-    // Parallelise independent DB queries
-    const [user, todaySchedule, activeDnd, recentRows] = await Promise.all([
-      db.select().from(users).where(eq(users.id, userId)).limit(1).then(r => r[0]),
-      this.getTodaySchedule(userId),
-      db
-        .select()
-        .from(dndPeriods)
-        .where(and(eq(dndPeriods.userId, userId), eq(dndPeriods.isActive, true)))
-        .limit(1)
-        .then(r => r[0] ?? null),
-      db
-        .select({
-          role: conversationMessages.role,
-          content: conversationMessages.content,
-        })
-        .from(conversationMessages)
-        .where(eq(conversationMessages.conversationId, conversationId))
-        .orderBy(desc(conversationMessages.createdAt))
-        .limit(maxMessages)
-        .then(rows => rows.reverse()),
-    ]);
+    // Parallelise all independent DB queries + memory retrieval
+    const [user, todaySchedule, activeDnd, recentRows, relevantMemories] =
+      await Promise.all([
+        db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+          .then(r => r[0]),
+        this.getTodaySchedule(userId),
+        db
+          .select()
+          .from(dndPeriods)
+          .where(
+            and(eq(dndPeriods.userId, userId), eq(dndPeriods.isActive, true)),
+          )
+          .limit(1)
+          .then(r => r[0] ?? null),
+        db
+          .select({
+            role: conversationMessages.role,
+            content: conversationMessages.content,
+          })
+          .from(conversationMessages)
+          .where(eq(conversationMessages.conversationId, conversationId))
+          .orderBy(desc(conversationMessages.createdAt))
+          .limit(maxMessages)
+          .then(rows => rows.reverse()),
+        // Retrieve memories — uses the current user transcript as the query
+        memoryRetrievalService.retrieveForTurn({
+          userId,
+          query: userTranscript ?? "",
+        }),
+      ]);
 
     const recentMessages: Message[] = recentRows.map(m => ({
       role: m.role as "user" | "assistant",
@@ -101,6 +119,7 @@ export class ConversationContextService {
       language,
       todaySchedule,
       activeDnd,
+      relevantMemories,
     });
 
     return { systemPrompt, recentMessages };
@@ -112,8 +131,9 @@ export class ConversationContextService {
     language: string;
     todaySchedule: ScheduleItem[];
     activeDnd: typeof dndPeriods.$inferSelect | null;
+    relevantMemories: Memory[];
   }): string {
-    const { companion, user, language, todaySchedule, activeDnd } = params;
+    const { companion, user, language, todaySchedule, activeDnd, relevantMemories } = params;
     const parts: string[] = [];
 
     // ── 1. Companion identity ──────────────────────────────────────────────
@@ -167,11 +187,11 @@ export class ConversationContextService {
       );
     }
 
-    // ── 6. Memories placeholder ───────────────────────────────────────────
-    // Future: inject top-k retrieved memories from the memories table here.
-    parts.push(
-      "\nRELEVANT MEMORIES:\n[No memories retrieved for this conversation yet. This section will be populated in a future milestone.]",
-    );
+    // ── 6. Relevant memories (top-k, bounded) ─────────────────────────────
+    // Only high-confidence memories (≥ 0.5) are injected; lower ones are skipped.
+    // The full memory store is never dumped — only what's retrieved for this turn.
+    const memoriesText = memoryRetrievalService.formatForPrompt(relevantMemories);
+    parts.push(`\nRELEVANT MEMORIES:\n${memoriesText}`);
 
     // ── 7. Behavioural rules ──────────────────────────────────────────────
     parts.push(`\nRULES:
@@ -179,27 +199,50 @@ export class ConversationContextService {
 - Keep replies to 1–3 sentences. Never ramble or lecture.
 - Never claim to be human. Describe yourself as their companion or digital friend if asked.
 - Never give medical advice or diagnoses. If health concerns arise, gently suggest consulting a doctor.
-- Do not start your reply by echoing the user's words verbatim as a filler opener.`);
+- Do not start your reply by echoing the user's words verbatim as a filler opener.
+- If the user states something that contradicts what you know from memory, gently note the discrepancy rather than blindly accepting the new claim.`);
 
     return parts.join("\n");
   }
 
   private async getTodaySchedule(userId: string): Promise<ScheduleItem[]> {
-    const now = new Date();
-    // UTC bounds for the current calendar day (server clock).
-    // For production: convert using the user's timezone.
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0, 0, 0,
+    // Determine today's UTC bounds from the user's timezone
+    const [userRow] = await db
+      .select({ timezone: users.timezone })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const timezone = userRow?.timezone ?? "UTC";
+
+    // Use Intl to find local midnight in the user's timezone
+    const nowUtc = new Date();
+    const localMidnightStr = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(nowUtc);
+
+    // Parse local midnight → convert to UTC for DB query
+    const localMidnight = new Date(`${localMidnightStr}T00:00:00`);
+    const localEndOfDay = new Date(`${localMidnightStr}T23:59:59`);
+
+    // Offset between local midnight and UTC midnight
+    const tzOffset = localMidnight.getTime() - Date.UTC(
+      localMidnight.getFullYear(),
+      localMidnight.getMonth(),
+      localMidnight.getDate(),
     );
-    const endOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      23, 59, 59,
+
+    const startOfDayUtc = new Date(
+      Date.UTC(
+        localMidnight.getFullYear(),
+        localMidnight.getMonth(),
+        localMidnight.getDate(),
+      ) - tzOffset,
     );
+    const endOfDayUtc = new Date(startOfDayUtc.getTime() + 86399999);
 
     const [todayReminders, todayAppointments] = await Promise.all([
       db
@@ -209,18 +252,21 @@ export class ConversationContextService {
           and(
             eq(reminders.userId, userId),
             eq(reminders.isActive, true),
-            gte(reminders.remindAtUtc, startOfDay),
-            lte(reminders.remindAtUtc, endOfDay),
+            gte(reminders.remindAtUtc, startOfDayUtc),
+            lte(reminders.remindAtUtc, endOfDayUtc),
           ),
         ),
       db
-        .select({ title: appointments.title, startsAt: appointments.startsAtUtc })
+        .select({
+          title: appointments.title,
+          startsAt: appointments.startsAtUtc,
+        })
         .from(appointments)
         .where(
           and(
             eq(appointments.userId, userId),
-            gte(appointments.startsAtUtc, startOfDay),
-            lte(appointments.startsAtUtc, endOfDay),
+            gte(appointments.startsAtUtc, startOfDayUtc),
+            lte(appointments.startsAtUtc, endOfDayUtc),
           ),
         ),
     ]);
@@ -229,13 +275,22 @@ export class ConversationContextService {
       ...todayReminders.map(r => ({
         type: "reminder" as const,
         title: r.title,
-        time: r.remindAt.toISOString().slice(11, 16), // HH:MM UTC
+        // Format in user's local timezone
+        time: new Intl.DateTimeFormat("sv-SE", {
+          timeZone: timezone,
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(r.remindAt),
         _sort: r.remindAt,
       })),
       ...todayAppointments.map(a => ({
         type: "appointment" as const,
         title: a.title,
-        time: a.startsAt.toISOString().slice(11, 16),
+        time: new Intl.DateTimeFormat("sv-SE", {
+          timeZone: timezone,
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(a.startsAt),
         _sort: a.startsAt,
       })),
     ];

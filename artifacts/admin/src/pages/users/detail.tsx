@@ -1038,6 +1038,342 @@ function ConversationsTab({ userId }: { userId: string }) {
 }
 
 // -----------------------------------------------------------------------------
+// MEMORIES TAB
+// -----------------------------------------------------------------------------
+
+const MEMORY_TYPES = [
+  "PROFILE", "RELATIONSHIP", "PREFERENCE", "BIOGRAPHICAL", "EPISODIC",
+  "ROUTINE", "HEALTH_CONTEXT", "PHOTO_MEMORY", "CONVERSATION_SUMMARY",
+] as const;
+type MemoryType = typeof MEMORY_TYPES[number];
+
+const TYPE_COLORS: Record<MemoryType, string> = {
+  PROFILE:              "bg-blue-100 text-blue-700",
+  RELATIONSHIP:         "bg-violet-100 text-violet-700",
+  PREFERENCE:           "bg-amber-100 text-amber-700",
+  BIOGRAPHICAL:         "bg-orange-100 text-orange-700",
+  EPISODIC:             "bg-green-100 text-green-700",
+  ROUTINE:              "bg-teal-100 text-teal-700",
+  HEALTH_CONTEXT:       "bg-red-100 text-red-700",
+  PHOTO_MEMORY:         "bg-pink-100 text-pink-700",
+  CONVERSATION_SUMMARY: "bg-slate-100 text-slate-700",
+};
+
+interface MemoryItem {
+  id: string;
+  userId: string;
+  type: string;
+  subject: string | null;
+  fact: string;
+  confidence: number;
+  sourceType: string;
+  sourceConversationId: string | null;
+  emotionalContext: string | null;
+  supersedesMemoryId: string | null;
+  isActive: boolean;
+  lastReferencedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function ConfidenceBadge({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const color = value >= 0.8 ? "bg-green-500" : value >= 0.5 ? "bg-amber-500" : "bg-red-400";
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-[10px] text-muted-foreground">{pct}%</span>
+    </div>
+  );
+}
+
+function MemoriesTab({ userId }: { userId: string }) {
+  const [allMemories, setAllMemories] = useState<MemoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [activeFilter, setActiveFilter] = useState<string>("true");
+  const [selected, setSelected] = useState<MemoryItem | null>(null);
+  const [chain, setChain] = useState<MemoryItem[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [editValues, setEditValues] = useState<{ type: string; subject: string; fact: string; confidence: string; emotionalContext: string }>({ type: "", subject: "", fact: "", confidence: "", emotionalContext: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMemories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (typeFilter !== "all") params.set("type", typeFilter);
+      params.set("active", activeFilter);
+      const r = await fetch(`/api/admin/users/${userId}/memories?${params}`, { credentials: "include" });
+      const data: { memories?: MemoryItem[] } = await r.json();
+      setAllMemories(data.memories ?? []);
+    } catch { setAllMemories([]); }
+    setLoading(false);
+  }, [userId, typeFilter, activeFilter]);
+
+  useEffect(() => { void fetchMemories(); }, [fetchMemories]);
+
+  const openMemory = useCallback(async (mem: MemoryItem) => {
+    setSelected(mem);
+    setEditing(false);
+    setError(null);
+    setEditValues({ type: mem.type, subject: mem.subject ?? "", fact: mem.fact, confidence: String(Math.round(mem.confidence * 100)), emotionalContext: mem.emotionalContext ?? "" });
+    // Fetch superseded chain
+    const r = await fetch(`/api/admin/memories/${mem.id}`, { credentials: "include" });
+    const data: { memory?: MemoryItem; supersedesChain?: MemoryItem[] } = await r.json();
+    setChain(data.supersedesChain ?? []);
+  }, []);
+
+  const saveEdit = async () => {
+    if (!selected) return;
+    setSaving(true); setError(null);
+    try {
+      const r = await fetch(`/api/admin/memories/${selected.id}`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: editValues.type || undefined,
+          subject: editValues.subject || undefined,
+          fact: editValues.fact || undefined,
+          confidence: editValues.confidence ? Number(editValues.confidence) / 100 : undefined,
+          emotionalContext: editValues.emotionalContext || undefined,
+        }),
+      });
+      const data: { memory?: MemoryItem; error?: string } = await r.json();
+      if (data.error) { setError(data.error); return; }
+      if (data.memory) {
+        setSelected(data.memory);
+        setAllMemories(prev => prev.map(m => m.id === data.memory!.id ? data.memory! : m));
+      }
+      setEditing(false);
+    } catch { setError("Failed to save changes."); }
+    setSaving(false);
+  };
+
+  const toggleActive = async (activate: boolean) => {
+    if (!selected) return;
+    setSaving(true);
+    const action = activate ? "reactivate" : "deactivate";
+    await fetch(`/api/admin/memories/${selected.id}/${action}`, { method: "POST", credentials: "include" });
+    const updated = { ...selected, isActive: activate };
+    setSelected(updated);
+    setAllMemories(prev => prev.map(m => m.id === selected.id ? updated : m));
+    setSaving(false);
+  };
+
+  const displayed = allMemories;
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* Left panel — list + filters */}
+      <div className="space-y-3 lg:col-span-1">
+        {/* Filters */}
+        <div className="flex gap-2 flex-wrap">
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+          >
+            <option value="all">All types</option>
+            {MEMORY_TYPES.map(t => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
+          </select>
+          <select
+            value={activeFilter}
+            onChange={e => setActiveFilter(e.target.value)}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+          >
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+            <option value="all">All</option>
+          </select>
+          <button onClick={() => void fetchMemories()} className="rounded-md border border-border bg-background px-2 py-1 text-xs hover:bg-muted">↻</button>
+        </div>
+
+        <p className="text-xs text-muted-foreground px-1">{displayed.length} memor{displayed.length !== 1 ? "ies" : "y"}</p>
+
+        {loading ? (
+          <div className="space-y-2">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+          </div>
+        ) : displayed.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <Brain className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-40" />
+              <p className="text-sm text-muted-foreground">No memories yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
+            {displayed.map(mem => (
+              <button
+                key={mem.id}
+                onClick={() => void openMemory(mem)}
+                className={`w-full text-left rounded-lg border p-3 transition-colors hover:bg-muted/50 ${
+                  selected?.id === mem.id ? "border-primary bg-primary/5" : "border-border"
+                } ${!mem.isActive ? "opacity-50" : ""}`}
+              >
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${TYPE_COLORS[mem.type as MemoryType] ?? "bg-muted text-muted-foreground"}`}>
+                    {mem.type.replace("_", " ")}
+                  </span>
+                  {mem.subject && <span className="text-[10px] text-muted-foreground font-medium">{mem.subject}</span>}
+                  {!mem.isActive && <span className="text-[10px] text-muted-foreground italic">inactive</span>}
+                </div>
+                <p className="text-sm line-clamp-2 leading-snug">{mem.fact}</p>
+                <ConfidenceBadge value={mem.confidence} />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Right panel — detail + edit */}
+      <div className="lg:col-span-2">
+        {!selected ? (
+          <Card className="border-dashed min-h-[300px] flex items-center justify-center">
+            <CardContent className="text-center py-12 text-muted-foreground">
+              <Brain className="h-8 w-8 mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Select a memory to view details</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${TYPE_COLORS[selected.type as MemoryType] ?? "bg-muted text-muted-foreground"}`}>
+                      {selected.type.replace("_", " ")}
+                    </span>
+                    {selected.subject && <span className="text-sm font-medium text-muted-foreground">{selected.subject}</span>}
+                    {!selected.isActive && <span className="rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">Inactive</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(selected.createdAt).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" })}
+                    {" · source: "}{selected.sourceType}
+                    {selected.lastReferencedAt && ` · last used ${new Date(selected.lastReferencedAt).toLocaleDateString()}`}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {!editing && (
+                    <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+                  )}
+                  {selected.isActive ? (
+                    <Button size="sm" variant="outline" onClick={() => void toggleActive(false)} disabled={saving} className="text-destructive border-destructive/30 hover:bg-destructive/10">Deactivate</Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => void toggleActive(true)} disabled={saving}>Reactivate</Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {error && <p className="text-sm text-destructive">{error}</p>}
+
+              {editing ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Type</label>
+                      <select
+                        value={editValues.type}
+                        onChange={e => setEditValues(v => ({ ...v, type: e.target.value }))}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                      >
+                        {MEMORY_TYPES.map(t => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Subject</label>
+                      <input
+                        value={editValues.subject}
+                        onChange={e => setEditValues(v => ({ ...v, subject: e.target.value }))}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                        placeholder="e.g. Petra"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Fact</label>
+                    <textarea
+                      value={editValues.fact}
+                      onChange={e => setEditValues(v => ({ ...v, fact: e.target.value }))}
+                      className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm min-h-[80px] resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Confidence (0–100)</label>
+                      <input
+                        type="number" min={0} max={100}
+                        value={editValues.confidence}
+                        onChange={e => setEditValues(v => ({ ...v, confidence: e.target.value }))}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Emotional context</label>
+                      <input
+                        value={editValues.emotionalContext}
+                        onChange={e => setEditValues(v => ({ ...v, emotionalContext: e.target.value }))}
+                        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                        placeholder="optional"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" onClick={() => void saveEdit()} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setEditing(false); setError(null); }}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-muted/50 px-4 py-3">
+                    <p className="text-sm leading-relaxed">{selected.fact}</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>Confidence: </span>
+                    <ConfidenceBadge value={selected.confidence} />
+                  </div>
+                  {selected.emotionalContext && (
+                    <p className="text-xs text-muted-foreground italic">"{selected.emotionalContext}"</p>
+                  )}
+                </div>
+              )}
+
+              {/* Superseded history */}
+              {chain.length > 0 && (
+                <div className="border-t pt-4 mt-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Correction history</p>
+                  <div className="space-y-2">
+                    {chain.map((ancestor, i) => (
+                      <div key={ancestor.id} className="flex gap-3 items-start opacity-60">
+                        <div className="mt-1 h-4 w-4 shrink-0 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                          {chain.length - i}
+                        </div>
+                        <div>
+                          <p className="text-xs line-through text-muted-foreground">{ancestor.fact}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {new Date(ancestor.createdAt).toLocaleDateString()} · {ancestor.sourceType}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
 // MAIN COMPONENT
 // -----------------------------------------------------------------------------
 
@@ -1094,7 +1430,7 @@ export function UserDetail() {
     { id: "reminders", label: "Reminders", icon: Calendar, component: <PlaceholderTab title="Reminders" description="Schedule daily medicine, water, and activity reminders." icon={Calendar} /> },
     { id: "appointments", label: "Appointments", icon: Clock, component: <PlaceholderTab title="Appointments" description="Manage upcoming doctor visits and family calls." icon={Clock} /> },
     { id: "photos", label: "Photos", icon: ImageIcon, component: <PlaceholderTab title="Photo Gallery" description="Upload familiar faces and places for the companion to reference." icon={ImageIcon} /> },
-    { id: "memories", label: "Memories", icon: Brain, component: <PlaceholderTab title="Memories & Context" description="Provide life context—hometown, past careers, favorite music." icon={Brain} /> },
+    { id: "memories", label: "Memories", icon: Brain, component: <MemoriesTab userId={user.id} /> },
     { id: "routines", label: "Routines", icon: ListChecks, component: <PlaceholderTab title="Daily Routines" description="Set up morning and evening rituals." icon={ListChecks} /> },
     { id: "conversations", label: "Conversations", icon: MessageSquare, component: <ConversationsTab userId={user.id} /> },
     { id: "safety", label: "Safety", icon: Shield, component: <PlaceholderTab title="Safety & Alerts" description="Configure fall detection, prolonged silence, and distress word alerts." icon={Shield} /> },

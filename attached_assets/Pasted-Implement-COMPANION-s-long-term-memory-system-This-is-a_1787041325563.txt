@@ -1,0 +1,74 @@
+Implement COMPANION's long-term memory system. This is a core MVP capability.
+
+MEMORY CATEGORIES
+Support:
+- PROFILE
+- RELATIONSHIP
+- PREFERENCE
+- BIOGRAPHICAL
+- EPISODIC
+- ROUTINE
+- HEALTH_CONTEXT
+- PHOTO_MEMORY
+- CONVERSATION_SUMMARY
+
+MEMORY RECORD
+At minimum:
+- id
+- user_id
+- type
+- subject
+- fact
+- confidence
+- source_type
+- source_id
+- emotional_context optional
+- created_at
+- updated_at
+- last_referenced_at
+- is_active
+- supersedes_memory_id
+- embedding/vector field if supported
+
+EXTRACTION
+After relevant user conversation turns, run a background/secondary memory-extraction step.
+Rules:
+- Be conservative.
+- Do not turn speculation into fact.
+- Do not infer medical diagnoses.
+- Prefer explicit user statements.
+- Store source link to conversation/message.
+- Give lower confidence to ambiguous or indirect statements.
+- Avoid duplicate active memories when an equivalent fact already exists.
+
+SEMANTIC RETRIEVAL
+Use PostgreSQL vector search if available in the selected Replit database setup. If the extension cannot be enabled, implement a portable fallback abstraction so we can switch later.
+ConversationContextService should retrieve a small number of highly relevant active memories for each user turn.
+
+CORRECTION BY VOICE
+Support explicit corrections such as:
+"Ne, Petra mi je kći, nije sestra."
+When correction is clear:
+- deactivate/supersede the old memory
+- create corrected active memory
+- retain audit trail
+- never silently erase provenance
+
+ADMIN MEMORY UI
+- list memories
+- filter by type
+- view fact, subject, confidence, source, creation time
+- edit/correct
+- deactivate/delete
+- show superseded history when applicable
+
+USER QUERY
+Support natural questions such as "Što pamtiš o Petri?" by retrieving relevant memories.
+
+ACCEPTANCE CRITERIA
+- A relationship stated in one session can be recalled in a later session.
+- A story/preference can be recalled when relevant.
+- An ambiguous statement does not automatically become a high-confidence fact.
+- Voice correction supersedes the wrong memory and retains audit history.
+- Admin can inspect and correct memory.
+- Conversation prompts contain relevant memory, not an unbounded history dump.

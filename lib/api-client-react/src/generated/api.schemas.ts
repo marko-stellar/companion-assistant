@@ -238,11 +238,191 @@ export interface TabletContext {
   dnd?: DndPeriod;
 }
 
+export type ReminderType = typeof ReminderType[keyof typeof ReminderType];
+
+
+export const ReminderType = {
+  GENERAL: 'GENERAL',
+  MEDICATION: 'MEDICATION',
+} as const;
+
+export type ReminderRecurrenceDaysItem = typeof ReminderRecurrenceDaysItem[keyof typeof ReminderRecurrenceDaysItem];
+
+
+export const ReminderRecurrenceDaysItem = {
+  MON: 'MON',
+  TUE: 'TUE',
+  WED: 'WED',
+  THU: 'THU',
+  FRI: 'FRI',
+  SAT: 'SAT',
+  SUN: 'SUN',
+} as const;
+
+export interface Reminder {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string | null;
+  type: ReminderType;
+  medicationName?: string | null;
+  /** Local HH:MM in the user's timezone */
+  localTime: string;
+  /** Empty array = one-time reminder (uses localDate) */
+  recurrenceDays: ReminderRecurrenceDaysItem[];
+  /** YYYY-MM-DD for one-time reminders */
+  localDate?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ReminderCreateRequestType = typeof ReminderCreateRequestType[keyof typeof ReminderCreateRequestType];
+
+
+export const ReminderCreateRequestType = {
+  GENERAL: 'GENERAL',
+  MEDICATION: 'MEDICATION',
+} as const;
+
+export type ReminderCreateRequestRecurrenceDaysItem = typeof ReminderCreateRequestRecurrenceDaysItem[keyof typeof ReminderCreateRequestRecurrenceDaysItem];
+
+
+export const ReminderCreateRequestRecurrenceDaysItem = {
+  MON: 'MON',
+  TUE: 'TUE',
+  WED: 'WED',
+  THU: 'THU',
+  FRI: 'FRI',
+  SAT: 'SAT',
+  SUN: 'SUN',
+} as const;
+
+export interface ReminderCreateRequest {
+  title: string;
+  description?: string | null;
+  type?: ReminderCreateRequestType;
+  medicationName?: string | null;
+  /** Local HH:MM (24h) */
+  localTime: string;
+  recurrenceDays?: ReminderCreateRequestRecurrenceDaysItem[];
+  /** YYYY-MM-DD; required when recurrenceDays is empty */
+  localDate?: string | null;
+}
+
+export type ReminderUpdateRequestType = typeof ReminderUpdateRequestType[keyof typeof ReminderUpdateRequestType];
+
+
+export const ReminderUpdateRequestType = {
+  GENERAL: 'GENERAL',
+  MEDICATION: 'MEDICATION',
+} as const;
+
+export type ReminderUpdateRequestRecurrenceDaysItem = typeof ReminderUpdateRequestRecurrenceDaysItem[keyof typeof ReminderUpdateRequestRecurrenceDaysItem];
+
+
+export const ReminderUpdateRequestRecurrenceDaysItem = {
+  MON: 'MON',
+  TUE: 'TUE',
+  WED: 'WED',
+  THU: 'THU',
+  FRI: 'FRI',
+  SAT: 'SAT',
+  SUN: 'SUN',
+} as const;
+
+export interface ReminderUpdateRequest {
+  title?: string;
+  description?: string | null;
+  type?: ReminderUpdateRequestType;
+  medicationName?: string | null;
+  localTime?: string;
+  recurrenceDays?: ReminderUpdateRequestRecurrenceDaysItem[];
+  localDate?: string | null;
+  isActive?: boolean;
+}
+
+export interface RemindersResponse {
+  reminders: Reminder[];
+  total: number;
+}
+
+export interface ReminderResponse {
+  reminder: Reminder;
+}
+
+export type ReminderOccurrenceResponse = typeof ReminderOccurrenceResponse[keyof typeof ReminderOccurrenceResponse] | null;
+
+
+export const ReminderOccurrenceResponse = {
+  YES: 'YES',
+  NO: 'NO',
+  UNKNOWN: 'UNKNOWN',
+  NOT_REQUIRED: 'NOT_REQUIRED',
+} as const;
+
+export interface ReminderOccurrence {
+  id: string;
+  reminderId: string;
+  scheduledForUtc: string;
+  triggeredAt?: string | null;
+  response?: ReminderOccurrenceResponse;
+  respondedAt?: string | null;
+}
+
+export interface OccurrencesResponse {
+  occurrences: ReminderOccurrence[];
+}
+
+export interface Appointment {
+  id: string;
+  userId: string;
+  title: string;
+  details?: string | null;
+  location?: string | null;
+  startsAtUtc: string;
+  endsAtUtc?: string | null;
+  reminderMinutesBefore?: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AppointmentCreateRequest {
+  title: string;
+  details?: string | null;
+  location?: string | null;
+  /** ISO timestamp (UTC) */
+  startsAtUtc: string;
+  endsAtUtc?: string | null;
+  reminderMinutesBefore?: number;
+}
+
+export interface AppointmentUpdateRequest {
+  title?: string;
+  details?: string | null;
+  location?: string | null;
+  startsAtUtc?: string;
+  endsAtUtc?: string | null;
+  reminderMinutesBefore?: number;
+  isActive?: boolean;
+}
+
+export interface AppointmentsResponse {
+  appointments: Appointment[];
+  total: number;
+}
+
+export interface AppointmentResponse {
+  appointment: Appointment;
+}
+
 export type TodayItemType = typeof TodayItemType[keyof typeof TodayItemType];
 
 
 export const TodayItemType = {
   reminder: 'reminder',
+  medication: 'medication',
   appointment: 'appointment',
 } as const;
 
@@ -252,7 +432,26 @@ export interface TodayItem {
   title: string;
   /** Local HH:MM */
   time: string;
-  done?: boolean;
+  done: boolean;
+  /** Reminder occurrence ID (present for reminder/medication items) */
+  occurrenceId?: string;
+}
+
+export type OccurrenceRespondRequestResponse = typeof OccurrenceRespondRequestResponse[keyof typeof OccurrenceRespondRequestResponse];
+
+
+export const OccurrenceRespondRequestResponse = {
+  YES: 'YES',
+  NO: 'NO',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export interface OccurrenceRespondRequest {
+  response: OccurrenceRespondRequestResponse;
+}
+
+export interface OkResponse {
+  ok: boolean;
 }
 
 export interface TodayResponse {
@@ -265,4 +464,30 @@ export type ListAdminUsersParams = {
  */
 search?: string;
 };
+
+export type ListAdminRemindersParams = {
+type?: ListAdminRemindersType;
+};
+
+export type ListAdminRemindersType = typeof ListAdminRemindersType[keyof typeof ListAdminRemindersType];
+
+
+export const ListAdminRemindersType = {
+  GENERAL: 'GENERAL',
+  MEDICATION: 'MEDICATION',
+} as const;
+
+export type ListAdminAppointmentsParams = {
+/**
+ * Pass "all" to include deactivated appointments
+ */
+active?: ListAdminAppointmentsActive;
+};
+
+export type ListAdminAppointmentsActive = typeof ListAdminAppointmentsActive[keyof typeof ListAdminAppointmentsActive];
+
+
+export const ListAdminAppointmentsActive = {
+  all: 'all',
+} as const;
 

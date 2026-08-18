@@ -16,19 +16,18 @@
  * Then returns the bounded recent-message window for the message list.
  */
 
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import {
   db,
   users,
   companions,
   conversationMessages,
-  reminders,
-  appointments,
   dndPeriods,
 } from "@workspace/db";
 import type { Memory } from "@workspace/db";
 import type { Message } from "../providers/llm.provider";
 import { memoryRetrievalService } from "./memory-retrieval.service";
+import { scheduleService, type TodayItem } from "./schedule.service";
 
 const CONTEXT_WINDOW = parseInt(
   process.env.CONVERSATION_CONTEXT_WINDOW ?? "10",
@@ -38,12 +37,6 @@ const CONTEXT_WINDOW = parseInt(
 export interface ConversationContext {
   systemPrompt: string;
   recentMessages: Message[];
-}
-
-interface ScheduleItem {
-  type: "reminder" | "appointment";
-  title: string;
-  time: string;
 }
 
 export class ConversationContextService {
@@ -86,7 +79,7 @@ export class ConversationContextService {
     // Parallelise remaining independent DB queries + memory retrieval
     const [todaySchedule, activeDnd, recentRows, relevantMemories] =
       await Promise.all([
-        this.getTodaySchedule(userId, timezone),
+        scheduleService.getTodayItems(userId),
         db
           .select()
           .from(dndPeriods)
@@ -133,7 +126,7 @@ export class ConversationContextService {
     companion: typeof companions.$inferSelect | null;
     user: typeof users.$inferSelect | null;
     language: string;
-    todaySchedule: ScheduleItem[];
+    todaySchedule: TodayItem[];
     activeDnd: typeof dndPeriods.$inferSelect | null;
     relevantMemories: Memory[];
   }): string {
@@ -176,7 +169,7 @@ export class ConversationContextService {
     // ── 4. Today's schedule ───────────────────────────────────────────────
     if (todaySchedule.length > 0) {
       const lines = todaySchedule
-        .map(s => `  • ${s.time}  ${s.title}  (${s.type})`)
+        .map(s => `  • ${s.time}  ${s.title}  (${s.type}${s.done ? ", done" : ""})`)
         .join("\n");
       parts.push(
         `\nTODAY'S SCHEDULE:\n${lines}\nYou may mention these naturally if they come up, but do not read the list aloud unprompted.`,
@@ -212,45 +205,6 @@ export class ConversationContextService {
     return parts.join("\n");
   }
 
-  /**
-   * Return the UTC instants that bracket the start and end of the current
-   * calendar day in the given IANA timezone.
-   *
-   * Strategy: determine how many milliseconds have elapsed since local
-   * midnight by reading the current local h/m/s via Intl, then subtract
-   * that from `now` to get local midnight in UTC.  End-of-day is
-   * local midnight + 86 400 s − 1 ms (covers DST changes: the query
-   * window may be 23 h or 25 h, but will never miss an item that belongs
-   * to the local day).
-   */
-  private localDayBoundsUtc(timezone: string): { start: Date; end: Date } {
-    const now = new Date();
-    const safeZone = this.ianaZoneOrUtc(timezone);
-
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone: safeZone,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-
-    const parts = fmt.formatToParts(now);
-    const get = (type: string) =>
-      parseInt(parts.find(p => p.type === type)?.value ?? "0", 10);
-
-    // handle the "24:xx:xx" that some Intl implementations emit for midnight
-    const localHour = get("hour") % 24;
-    const localMin = get("minute");
-    const localSec = get("second");
-
-    const elapsedMs = (localHour * 3600 + localMin * 60 + localSec) * 1000;
-    const start = new Date(now.getTime() - elapsedMs);
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
-
-    return { start, end };
-  }
-
   /** Format a UTC Date as HH:MM in the given IANA timezone. */
   private formatLocalTime(date: Date, timezone: string): string {
     return new Intl.DateTimeFormat("en-GB", {
@@ -271,55 +225,13 @@ export class ConversationContextService {
     }
   }
 
-  private async getTodaySchedule(
-    userId: string,
-    timezone: string,
-  ): Promise<ScheduleItem[]> {
-    const { start: startOfDay, end: endOfDay } =
-      this.localDayBoundsUtc(timezone);
-
-    const [todayReminders, todayAppointments] = await Promise.all([
-      db
-        .select({ title: reminders.title, remindAt: reminders.remindAtUtc })
-        .from(reminders)
-        .where(
-          and(
-            eq(reminders.userId, userId),
-            eq(reminders.isActive, true),
-            gte(reminders.remindAtUtc, startOfDay),
-            lte(reminders.remindAtUtc, endOfDay),
-          ),
-        ),
-      db
-        .select({ title: appointments.title, startsAt: appointments.startsAtUtc })
-        .from(appointments)
-        .where(
-          and(
-            eq(appointments.userId, userId),
-            gte(appointments.startsAtUtc, startOfDay),
-            lte(appointments.startsAtUtc, endOfDay),
-          ),
-        ),
-    ]);
-
-    const items: (ScheduleItem & { _sort: Date })[] = [
-      ...todayReminders.map(r => ({
-        type: "reminder" as const,
-        title: r.title,
-        time: this.formatLocalTime(r.remindAt, timezone),
-        _sort: r.remindAt,
-      })),
-      ...todayAppointments.map(a => ({
-        type: "appointment" as const,
-        title: a.title,
-        time: this.formatLocalTime(a.startsAt, timezone),
-        _sort: a.startsAt,
-      })),
-    ];
-
-    return items
-      .sort((a, b) => a._sort.getTime() - b._sort.getTime())
-      .map(({ _sort: _s, ...rest }) => rest);
+  /**
+   * Formatted today-schedule for external callers (LLM context layer).
+   * Delegates to ScheduleService, which owns the real reminders/appointments
+   * queries.
+   */
+  async getTodaySchedule(userId: string): Promise<string> {
+    return scheduleService.getTodaySchedule(userId);
   }
 }
 

@@ -11,5 +11,6 @@ export type TodayItemType = typeof TodayItemType[keyof typeof TodayItemType];
 
 export const TodayItemType = {
   reminder: 'reminder',
+  medication: 'medication',
   appointment: 'appointment',
 } as const;

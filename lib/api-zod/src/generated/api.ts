@@ -363,6 +363,295 @@ export const RevokeDeviceSessionResponse = zod.object({
 
 
 /**
+ * @summary List reminders for a user
+ */
+export const ListAdminRemindersParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListAdminRemindersQueryParams = zod.object({
+  "type": zod.enum(['GENERAL', 'MEDICATION']).optional()
+})
+
+export const ListAdminRemindersResponse = zod.object({
+  "reminders": zod.array(zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "type": zod.enum(['GENERAL', 'MEDICATION']),
+  "medicationName": zod.string().nullish(),
+  "localTime": zod.string().describe('Local HH:MM in the user\'s timezone'),
+  "recurrenceDays": zod.array(zod.enum(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])).describe('Empty array = one-time reminder (uses localDate)'),
+  "localDate": zod.string().nullish().describe('YYYY-MM-DD for one-time reminders'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Create a reminder
+ */
+export const CreateAdminReminderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CreateAdminReminderBody = zod.object({
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "type": zod.enum(['GENERAL', 'MEDICATION']).optional(),
+  "medicationName": zod.string().nullish(),
+  "localTime": zod.string().describe('Local HH:MM (24h)'),
+  "recurrenceDays": zod.array(zod.enum(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])).optional(),
+  "localDate": zod.string().nullish().describe('YYYY-MM-DD; required when recurrenceDays is empty')
+})
+
+export const CreateAdminReminderResponse = zod.object({
+  "reminder": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "type": zod.enum(['GENERAL', 'MEDICATION']),
+  "medicationName": zod.string().nullish(),
+  "localTime": zod.string().describe('Local HH:MM in the user\'s timezone'),
+  "recurrenceDays": zod.array(zod.enum(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])).describe('Empty array = one-time reminder (uses localDate)'),
+  "localDate": zod.string().nullish().describe('YYYY-MM-DD for one-time reminders'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Get a reminder
+ */
+export const GetAdminReminderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAdminReminderResponse = zod.object({
+  "reminder": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "type": zod.enum(['GENERAL', 'MEDICATION']),
+  "medicationName": zod.string().nullish(),
+  "localTime": zod.string().describe('Local HH:MM in the user\'s timezone'),
+  "recurrenceDays": zod.array(zod.enum(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])).describe('Empty array = one-time reminder (uses localDate)'),
+  "localDate": zod.string().nullish().describe('YYYY-MM-DD for one-time reminders'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Update a reminder
+ */
+export const UpdateAdminReminderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateAdminReminderBody = zod.object({
+  "title": zod.string().optional(),
+  "description": zod.string().nullish(),
+  "type": zod.enum(['GENERAL', 'MEDICATION']).optional(),
+  "medicationName": zod.string().nullish(),
+  "localTime": zod.string().optional(),
+  "recurrenceDays": zod.array(zod.enum(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])).optional(),
+  "localDate": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateAdminReminderResponse = zod.object({
+  "reminder": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "type": zod.enum(['GENERAL', 'MEDICATION']),
+  "medicationName": zod.string().nullish(),
+  "localTime": zod.string().describe('Local HH:MM in the user\'s timezone'),
+  "recurrenceDays": zod.array(zod.enum(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'])).describe('Empty array = one-time reminder (uses localDate)'),
+  "localDate": zod.string().nullish().describe('YYYY-MM-DD for one-time reminders'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Deactivate a reminder (soft delete)
+ */
+export const DeleteAdminReminderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminReminderResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Next upcoming occurrences of a reminder
+ */
+export const ListAdminReminderOccurrencesParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListAdminReminderOccurrencesResponse = zod.object({
+  "occurrences": zod.array(zod.object({
+  "id": zod.string(),
+  "reminderId": zod.string(),
+  "scheduledForUtc": zod.string(),
+  "triggeredAt": zod.string().nullish(),
+  "response": zod.union([zod.literal('YES'),zod.literal('NO'),zod.literal('UNKNOWN'),zod.literal('NOT_REQUIRED'),zod.literal(null)]).nullish(),
+  "respondedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary List appointments for a user (active only by default)
+ */
+export const ListAdminAppointmentsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListAdminAppointmentsQueryParams = zod.object({
+  "active": zod.enum(['all']).optional().describe('Pass \"all\" to include deactivated appointments')
+})
+
+export const ListAdminAppointmentsResponse = zod.object({
+  "appointments": zod.array(zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "details": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "startsAtUtc": zod.string(),
+  "endsAtUtc": zod.string().nullish(),
+  "reminderMinutesBefore": zod.number().optional(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Create an appointment
+ */
+export const CreateAdminAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CreateAdminAppointmentBody = zod.object({
+  "title": zod.string(),
+  "details": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "startsAtUtc": zod.string().describe('ISO timestamp (UTC)'),
+  "endsAtUtc": zod.string().nullish(),
+  "reminderMinutesBefore": zod.number().optional()
+})
+
+export const CreateAdminAppointmentResponse = zod.object({
+  "appointment": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "details": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "startsAtUtc": zod.string(),
+  "endsAtUtc": zod.string().nullish(),
+  "reminderMinutesBefore": zod.number().optional(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Get an appointment
+ */
+export const GetAdminAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAdminAppointmentResponse = zod.object({
+  "appointment": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "details": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "startsAtUtc": zod.string(),
+  "endsAtUtc": zod.string().nullish(),
+  "reminderMinutesBefore": zod.number().optional(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Update an appointment
+ */
+export const UpdateAdminAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateAdminAppointmentBody = zod.object({
+  "title": zod.string().optional(),
+  "details": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "startsAtUtc": zod.string().optional(),
+  "endsAtUtc": zod.string().nullish(),
+  "reminderMinutesBefore": zod.number().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateAdminAppointmentResponse = zod.object({
+  "appointment": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "title": zod.string(),
+  "details": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "startsAtUtc": zod.string(),
+  "endsAtUtc": zod.string().nullish(),
+  "reminderMinutesBefore": zod.number().optional(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Deactivate an appointment (soft delete)
+ */
+export const DeleteAdminAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminAppointmentResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary Consume a one-time setup code and claim a device session
  */
 export const tabletSetupBodyCodeMin = 6;
@@ -435,11 +724,28 @@ export const GetTabletMeResponse = zod.object({
 export const GetTabletTodayResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['reminder', 'appointment']),
+  "type": zod.enum(['reminder', 'medication', 'appointment']),
   "title": zod.string(),
   "time": zod.string().describe('Local HH:MM'),
-  "done": zod.boolean().optional()
+  "done": zod.boolean(),
+  "occurrenceId": zod.string().optional().describe('Reminder occurrence ID (present for reminder\/medication items)')
 }))
+})
+
+
+/**
+ * @summary Record a medication confirmation (YES/NO/UNKNOWN) on a triggered occurrence
+ */
+export const RespondToOccurrenceParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RespondToOccurrenceBody = zod.object({
+  "response": zod.enum(['YES', 'NO', 'UNKNOWN'])
+})
+
+export const RespondToOccurrenceResponse = zod.object({
+  "ok": zod.boolean()
 })
 
 

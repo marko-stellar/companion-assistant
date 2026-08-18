@@ -3,6 +3,8 @@ import { Router } from "express";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { db, deviceSetupCodes, deviceSessions, users, companions, dndPeriods } from "@workspace/db";
 import { requireDevice } from "../../middlewares/requireDevice";
+import { remindersService } from "../../domains/reminders";
+import { scheduleService } from "../../services/schedule.service";
 import conversationRouter from "./conversation";
 
 /**
@@ -120,51 +122,65 @@ router.get("/me", requireDevice, async (req, res): Promise<void> => {
   });
 });
 
-// GET /tablet/today — today's schedule items (placeholder until reminders/appointments are built)
+// GET /tablet/today — today's real reminder occurrences + appointments,
+// sorted by local time in the user's timezone.
 router.get("/today", requireDevice, async (req, res): Promise<void> => {
   const userId = req.deviceUserId!;
-
-  const [user] = await db
-    .select({ language: users.language })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  const hr = user?.language === "hr";
-
-  const items = [
-    {
-      id: "ph-1",
-      type: "reminder" as const,
-      title: hr ? "Jutarnji lijekovi" : "Morning medication",
-      time: "09:00",
-      done: false,
-    },
-    {
-      id: "ph-2",
-      type: "appointment" as const,
-      title: hr ? "Telefonski poziv s obitelji" : "Phone call with family",
-      time: "11:00",
-      done: false,
-    },
-    {
-      id: "ph-3",
-      type: "reminder" as const,
-      title: hr ? "Ručak" : "Lunch",
-      time: "13:00",
-      done: false,
-    },
-    {
-      id: "ph-4",
-      type: "reminder" as const,
-      title: hr ? "Večernji lijekovi" : "Evening medication",
-      time: "19:00",
-      done: false,
-    },
-  ];
-
+  const items = await scheduleService.getTodayItems(userId);
   res.json({ items });
 });
+
+// POST /tablet/occurrences/:id/respond — medication confirmation
+router.post(
+  "/occurrences/:id/respond",
+  requireDevice,
+  async (req, res): Promise<void> => {
+    const userId = req.deviceUserId!;
+    const occurrenceId = String(req.params.id);
+
+    const UUID_RE =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(occurrenceId)) {
+      res.status(404).json({ error: "Occurrence not found" });
+      return;
+    }
+
+    const response = req.body?.response;
+    if (response !== "YES" && response !== "NO" && response !== "UNKNOWN") {
+      res
+        .status(400)
+        .json({ error: "response must be YES, NO, or UNKNOWN" });
+      return;
+    }
+
+    const row = await remindersService.getOccurrenceWithReminder(occurrenceId);
+    if (!row || row.reminder.userId !== userId) {
+      res.status(404).json({ error: "Occurrence not found" });
+      return;
+    }
+    if (row.reminder.type !== "MEDICATION") {
+      res
+        .status(400)
+        .json({ error: "Only medication reminders take a confirmation" });
+      return;
+    }
+
+    // Atomic: only triggered, unanswered occurrences can transition.
+    const updated = await remindersService.respond(occurrenceId, response);
+    if (!updated) {
+      res.status(409).json({
+        error:
+          "Occurrence is not awaiting a response (not yet triggered, or already answered)",
+      });
+      return;
+    }
+    req.log.info(
+      { occurrenceId, response, reminderId: row.reminder.id },
+      "Reminder occurrence response recorded",
+    );
+    res.json({ ok: true });
+  },
+);
 
 // Voice conversation loop — POST /tablet/converse
 router.use(conversationRouter);

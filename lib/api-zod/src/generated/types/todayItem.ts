@@ -13,5 +13,7 @@ export interface TodayItem {
   title: string;
   /** Local HH:MM */
   time: string;
-  done?: boolean;
+  done: boolean;
+  /** Reminder occurrence ID (present for reminder/medication items) */
+  occurrenceId?: string;
 }

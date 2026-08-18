@@ -402,6 +402,328 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   # ── Tablet ────────────────────────────────────────────────────────────────
+  /admin/users/{id}/reminders:
+    get:
+      operationId: listAdminReminders
+      tags: [admin-scheduling]
+      summary: List reminders for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [GENERAL, MEDICATION]
+      responses:
+        "200":
+          description: Reminder list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemindersResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAdminReminder
+      tags: [admin-scheduling]
+      summary: Create a reminder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReminderCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/reminders/{id}:
+    get:
+      operationId: getAdminReminder
+      tags: [admin-scheduling]
+      summary: Get a reminder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reminder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateAdminReminder
+      tags: [admin-scheduling]
+      summary: Update a reminder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReminderUpdateRequest"
+      responses:
+        "200":
+          description: Updated reminder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAdminReminder
+      tags: [admin-scheduling]
+      summary: Deactivate a reminder (soft delete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/reminders/{id}/occurrences:
+    get:
+      operationId: listAdminReminderOccurrences
+      tags: [admin-scheduling]
+      summary: Next upcoming occurrences of a reminder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upcoming occurrences (next 7)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OccurrencesResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/appointments:
+    get:
+      operationId: listAdminAppointments
+      tags: [admin-scheduling]
+      summary: List appointments for a user (active only by default)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: string
+            enum: [all]
+          description: Pass "all" to include deactivated appointments
+      responses:
+        "200":
+          description: Appointment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentsResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAdminAppointment
+      tags: [admin-scheduling]
+      summary: Create an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/appointments/{id}:
+    get:
+      operationId: getAdminAppointment
+      tags: [admin-scheduling]
+      summary: Get an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateAdminAppointment
+      tags: [admin-scheduling]
+      summary: Update an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdateRequest"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAdminAppointment
+      tags: [admin-scheduling]
+      summary: Deactivate an appointment (soft delete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /tablet/setup:
     post:
       operationId: tabletSetup
@@ -464,6 +786,51 @@ paths:
                 $ref: "#/components/schemas/TodayResponse"
         "401":
           description: Token invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tablet/occurrences/{id}/respond:
+    post:
+      operationId: respondToOccurrence
+      tags: [tablet]
+      summary: Record a medication confirmation (YES/NO/UNKNOWN) on a triggered occurrence
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OccurrenceRespondRequest"
+      responses:
+        "200":
+          description: Response recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "400":
+          description: Invalid response value or non-medication reminder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Occurrence not found or not owned by this device's user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Occurrence not awaiting a response
           content:
             application/json:
               schema:
@@ -840,21 +1207,271 @@ components:
         dnd:
           $ref: "#/components/schemas/DndPeriod"
 
+    Reminder:
+      type: object
+      required: [id, userId, title, type, localTime, recurrenceDays, isActive]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [GENERAL, MEDICATION]
+        medicationName:
+          type: string
+          nullable: true
+        localTime:
+          type: string
+          description: "Local HH:MM in the user's timezone"
+        recurrenceDays:
+          type: array
+          items:
+            type: string
+            enum: [MON, TUE, WED, THU, FRI, SAT, SUN]
+          description: "Empty array = one-time reminder (uses localDate)"
+        localDate:
+          type: string
+          nullable: true
+          description: "YYYY-MM-DD for one-time reminders"
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ReminderCreateRequest:
+      type: object
+      required: [title, localTime]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [GENERAL, MEDICATION]
+        medicationName:
+          type: string
+          nullable: true
+        localTime:
+          type: string
+          description: "Local HH:MM (24h)"
+        recurrenceDays:
+          type: array
+          items:
+            type: string
+            enum: [MON, TUE, WED, THU, FRI, SAT, SUN]
+        localDate:
+          type: string
+          nullable: true
+          description: "YYYY-MM-DD; required when recurrenceDays is empty"
+
+    ReminderUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [GENERAL, MEDICATION]
+        medicationName:
+          type: string
+          nullable: true
+        localTime:
+          type: string
+        recurrenceDays:
+          type: array
+          items:
+            type: string
+            enum: [MON, TUE, WED, THU, FRI, SAT, SUN]
+        localDate:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    RemindersResponse:
+      type: object
+      required: [reminders, total]
+      properties:
+        reminders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reminder"
+        total:
+          type: integer
+
+    ReminderResponse:
+      type: object
+      required: [reminder]
+      properties:
+        reminder:
+          $ref: "#/components/schemas/Reminder"
+
+    ReminderOccurrence:
+      type: object
+      required: [id, reminderId, scheduledForUtc]
+      properties:
+        id:
+          type: string
+        reminderId:
+          type: string
+        scheduledForUtc:
+          type: string
+        triggeredAt:
+          type: string
+          nullable: true
+        response:
+          type: string
+          nullable: true
+          enum: [YES, NO, UNKNOWN, NOT_REQUIRED, null]
+        respondedAt:
+          type: string
+          nullable: true
+
+    OccurrencesResponse:
+      type: object
+      required: [occurrences]
+      properties:
+        occurrences:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReminderOccurrence"
+
+    Appointment:
+      type: object
+      required: [id, userId, title, startsAtUtc, isActive]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        details:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        startsAtUtc:
+          type: string
+        endsAtUtc:
+          type: string
+          nullable: true
+        reminderMinutesBefore:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    AppointmentCreateRequest:
+      type: object
+      required: [title, startsAtUtc]
+      properties:
+        title:
+          type: string
+        details:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        startsAtUtc:
+          type: string
+          description: "ISO timestamp (UTC)"
+        endsAtUtc:
+          type: string
+          nullable: true
+        reminderMinutesBefore:
+          type: integer
+
+    AppointmentUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        details:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        startsAtUtc:
+          type: string
+        endsAtUtc:
+          type: string
+          nullable: true
+        reminderMinutesBefore:
+          type: integer
+        isActive:
+          type: boolean
+
+    AppointmentsResponse:
+      type: object
+      required: [appointments, total]
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        total:
+          type: integer
+
+    AppointmentResponse:
+      type: object
+      required: [appointment]
+      properties:
+        appointment:
+          $ref: "#/components/schemas/Appointment"
+
     TodayItem:
       type: object
-      required: [id, type, title, time]
+      required: [id, type, title, time, done]
       properties:
         id:
           type: string
         type:
           type: string
-          enum: [reminder, appointment]
+          enum: [reminder, medication, appointment]
         title:
           type: string
         time:
           type: string
           description: "Local HH:MM"
         done:
+          type: boolean
+        occurrenceId:
+          type: string
+          description: "Reminder occurrence ID (present for reminder/medication items)"
+
+    OccurrenceRespondRequest:
+      type: object
+      required: [response]
+      properties:
+        response:
+          type: string
+          enum: [YES, NO, UNKNOWN]
+
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
           type: boolean
 
     TodayResponse:

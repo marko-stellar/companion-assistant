@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
   index,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
@@ -21,14 +22,16 @@ export const appointments = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
-    description: text("description"),
+    /** Free-text details (stored in the legacy "description" DB column) */
+    details: text("description"),
     location: text("location"),
     startsAtUtc: timestamp("starts_at_utc").notNull(),
     endsAtUtc: timestamp("ends_at_utc"),
-    /** Minutes before startsAtUtc to remind the user */
+    /** Minutes before startsAtUtc to remind the user (dormant for now) */
     reminderMinutesBefore: integer("reminder_minutes_before")
       .notNull()
       .default(30),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

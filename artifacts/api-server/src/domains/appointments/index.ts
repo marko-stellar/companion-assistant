@@ -20,11 +20,26 @@ export class AppointmentsService {
     return appointment;
   }
 
-  async getForUser(userId: string): Promise<Appointment[]> {
+  async getById(id: string): Promise<Appointment | null> {
+    const [row] = await db
+      .select()
+      .from(appointments)
+      .where(eq(appointments.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async getForUser(
+    userId: string,
+    opts: { includeInactive?: boolean } = {},
+  ): Promise<Appointment[]> {
+    const conditions = [eq(appointments.userId, userId)];
+    if (!opts.includeInactive)
+      conditions.push(eq(appointments.isActive, true));
     return db
       .select()
       .from(appointments)
-      .where(eq(appointments.userId, userId))
+      .where(and(...conditions))
       .orderBy(asc(appointments.startsAtUtc));
   }
 
@@ -35,14 +50,31 @@ export class AppointmentsService {
       .where(
         and(
           eq(appointments.userId, userId),
+          eq(appointments.isActive, true),
           gte(appointments.startsAtUtc, afterUtc),
         ),
       )
       .orderBy(asc(appointments.startsAtUtc));
   }
 
-  async delete(id: string): Promise<void> {
-    await db.delete(appointments).where(eq(appointments.id, id));
+  async update(
+    id: string,
+    data: Partial<InsertAppointment>,
+  ): Promise<Appointment | null> {
+    const [row] = await db
+      .update(appointments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(appointments.id, id))
+      .returning();
+    return row ?? null;
+  }
+
+  /** Soft delete via isActive. */
+  async deactivate(id: string): Promise<void> {
+    await db
+      .update(appointments)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(appointments.id, id));
   }
 }
 

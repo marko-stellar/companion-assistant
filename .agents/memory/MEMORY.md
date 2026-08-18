@@ -1,5 +1,6 @@
 - [COMPANION motion & screenshot lessons](companion-motion-language.md) — transform-only staggering (opacity keyframes break screenshots), sine-breath motion rules, canvas row layout.
-- [COMPANION foundation](companion-foundation.md) — DB migrations done (19 tables, pgvector), 4 companions seeded, 3 tests pass, tablet+admin artifacts running; providers/domains are stubs; scheduler not wired to boot.
+- [COMPANION foundation](companion-foundation.md) — architecture decisions and constraints of the base platform (pgvector, artifact layout, provider abstraction).
+- [COMPANION scheduling lessons](companion-scheduling.md) — wipe pending occurrences on schedule edits; local-day end = next local midnight (DST); migrations must live in the drizzle chain (pty workaround for generate).
 - [COMPANION codegen quirks](companion-codegen-quirks.md) — Orval appends to index.ts instead of overwriting; api-client-react must re-export custom-fetch.ts; api-zod must override index to only export generated/api.
 - [COMPANION device assignment](companion-device-assignment.md) — 6-char alphanumeric code (24h TTL), device_sessions with revokedAt, Bearer token in localStorage, tablet uses setAuthTokenGetter.
 - [COMPANION voice loop](companion-voice-loop.md) — ElevenLabs STT+TTS (scribe_v1 / eleven_multilingual_v2), MockLLM, JSON base64 audio upload, VoicePhase state machine, voice ID env vars per companion.

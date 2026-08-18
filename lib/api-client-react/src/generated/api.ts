@@ -22,6 +22,10 @@ import type {
 import type {
   AdminLoginInput,
   AdminUser,
+  AppointmentCreateRequest,
+  AppointmentResponse,
+  AppointmentUpdateRequest,
+  AppointmentsResponse,
   Companion,
   DashboardStats,
   DeviceCode,
@@ -32,8 +36,17 @@ import type {
   EmergencyContactInput,
   ErrorResponse,
   HealthStatus,
+  ListAdminAppointmentsParams,
+  ListAdminRemindersParams,
   ListAdminUsersParams,
   MessageResponse,
+  OccurrenceRespondRequest,
+  OccurrencesResponse,
+  OkResponse,
+  ReminderCreateRequest,
+  ReminderResponse,
+  ReminderUpdateRequest,
+  RemindersResponse,
   TabletContext,
   TabletSetupInput,
   TabletSetupResponse,
@@ -1342,6 +1355,845 @@ export const useRevokeDeviceSession = <TError = ErrorType<ErrorResponse>,
       return useMutation(getRevokeDeviceSessionMutationOptions(options));
     }
 
+export const getListAdminRemindersUrl = (id: string,
+    params?: ListAdminRemindersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/users/${id}/reminders?${stringifiedParams}` : `/api/admin/users/${id}/reminders`
+}
+
+/**
+ * @summary List reminders for a user
+ */
+export const listAdminReminders = async (id: string,
+    params?: ListAdminRemindersParams, options?: RequestInit): Promise<RemindersResponse> => {
+
+  return customFetch<RemindersResponse>(getListAdminRemindersUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminRemindersQueryKey = (id: string,
+    params?: ListAdminRemindersParams,) => {
+    return [
+    `/api/admin/users/${id}/reminders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminRemindersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminReminders>>, TError = ErrorType<ErrorResponse>>(id: string,
+    params?: ListAdminRemindersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminReminders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminRemindersQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminReminders>>> = ({ signal }) => listAdminReminders(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminReminders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminRemindersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminReminders>>>
+export type ListAdminRemindersQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List reminders for a user
+ */
+
+export function useListAdminReminders<TData = Awaited<ReturnType<typeof listAdminReminders>>, TError = ErrorType<ErrorResponse>>(
+ id: string,
+    params?: ListAdminRemindersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminReminders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminRemindersQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminReminderUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/reminders`
+}
+
+/**
+ * @summary Create a reminder
+ */
+export const createAdminReminder = async (id: string,
+    reminderCreateRequest: ReminderCreateRequest, options?: RequestInit): Promise<ReminderResponse> => {
+
+  return customFetch<ReminderResponse>(getCreateAdminReminderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reminderCreateRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminReminderMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminReminder>>, TError,{id: string;data: BodyType<ReminderCreateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminReminder>>, TError,{id: string;data: BodyType<ReminderCreateRequest>}, TContext> => {
+
+const mutationKey = ['createAdminReminder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminReminder>>, {id: string;data: BodyType<ReminderCreateRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createAdminReminder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminReminderMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminReminder>>>
+    export type CreateAdminReminderMutationBody = BodyType<ReminderCreateRequest>
+    export type CreateAdminReminderMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a reminder
+ */
+export const useCreateAdminReminder = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminReminder>>, TError,{id: string;data: BodyType<ReminderCreateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminReminder>>,
+        TError,
+        {id: string;data: BodyType<ReminderCreateRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminReminderMutationOptions(options));
+    }
+
+export const getGetAdminReminderUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/reminders/${id}`
+}
+
+/**
+ * @summary Get a reminder
+ */
+export const getAdminReminder = async (id: string, options?: RequestInit): Promise<ReminderResponse> => {
+
+  return customFetch<ReminderResponse>(getGetAdminReminderUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminReminderQueryKey = (id: string,) => {
+    return [
+    `/api/admin/reminders/${id}`
+    ] as const;
+    }
+
+
+export const getGetAdminReminderQueryOptions = <TData = Awaited<ReturnType<typeof getAdminReminder>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminReminder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminReminderQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminReminder>>> = ({ signal }) => getAdminReminder(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminReminder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminReminderQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminReminder>>>
+export type GetAdminReminderQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get a reminder
+ */
+
+export function useGetAdminReminder<TData = Awaited<ReturnType<typeof getAdminReminder>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminReminder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminReminderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminReminderUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/reminders/${id}`
+}
+
+/**
+ * @summary Update a reminder
+ */
+export const updateAdminReminder = async (id: string,
+    reminderUpdateRequest: ReminderUpdateRequest, options?: RequestInit): Promise<ReminderResponse> => {
+
+  return customFetch<ReminderResponse>(getUpdateAdminReminderUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reminderUpdateRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminReminderMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminReminder>>, TError,{id: string;data: BodyType<ReminderUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminReminder>>, TError,{id: string;data: BodyType<ReminderUpdateRequest>}, TContext> => {
+
+const mutationKey = ['updateAdminReminder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminReminder>>, {id: string;data: BodyType<ReminderUpdateRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAdminReminder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminReminderMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminReminder>>>
+    export type UpdateAdminReminderMutationBody = BodyType<ReminderUpdateRequest>
+    export type UpdateAdminReminderMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update a reminder
+ */
+export const useUpdateAdminReminder = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminReminder>>, TError,{id: string;data: BodyType<ReminderUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminReminder>>,
+        TError,
+        {id: string;data: BodyType<ReminderUpdateRequest>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminReminderMutationOptions(options));
+    }
+
+export const getDeleteAdminReminderUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/reminders/${id}`
+}
+
+/**
+ * @summary Deactivate a reminder (soft delete)
+ */
+export const deleteAdminReminder = async (id: string, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getDeleteAdminReminderUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminReminderMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminReminder>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminReminder>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteAdminReminder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminReminder>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAdminReminder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminReminderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminReminder>>>
+
+    export type DeleteAdminReminderMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Deactivate a reminder (soft delete)
+ */
+export const useDeleteAdminReminder = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminReminder>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminReminder>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminReminderMutationOptions(options));
+    }
+
+export const getListAdminReminderOccurrencesUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/reminders/${id}/occurrences`
+}
+
+/**
+ * @summary Next upcoming occurrences of a reminder
+ */
+export const listAdminReminderOccurrences = async (id: string, options?: RequestInit): Promise<OccurrencesResponse> => {
+
+  return customFetch<OccurrencesResponse>(getListAdminReminderOccurrencesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminReminderOccurrencesQueryKey = (id: string,) => {
+    return [
+    `/api/admin/reminders/${id}/occurrences`
+    ] as const;
+    }
+
+
+export const getListAdminReminderOccurrencesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminReminderOccurrences>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminReminderOccurrences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminReminderOccurrencesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminReminderOccurrences>>> = ({ signal }) => listAdminReminderOccurrences(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminReminderOccurrences>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminReminderOccurrencesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminReminderOccurrences>>>
+export type ListAdminReminderOccurrencesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Next upcoming occurrences of a reminder
+ */
+
+export function useListAdminReminderOccurrences<TData = Awaited<ReturnType<typeof listAdminReminderOccurrences>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminReminderOccurrences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminReminderOccurrencesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminAppointmentsUrl = (id: string,
+    params?: ListAdminAppointmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/users/${id}/appointments?${stringifiedParams}` : `/api/admin/users/${id}/appointments`
+}
+
+/**
+ * @summary List appointments for a user (active only by default)
+ */
+export const listAdminAppointments = async (id: string,
+    params?: ListAdminAppointmentsParams, options?: RequestInit): Promise<AppointmentsResponse> => {
+
+  return customFetch<AppointmentsResponse>(getListAdminAppointmentsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAppointmentsQueryKey = (id: string,
+    params?: ListAdminAppointmentsParams,) => {
+    return [
+    `/api/admin/users/${id}/appointments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminAppointmentsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAppointments>>, TError = ErrorType<ErrorResponse>>(id: string,
+    params?: ListAdminAppointmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAppointments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAppointmentsQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAppointments>>> = ({ signal }) => listAdminAppointments(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAppointments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAppointmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAppointments>>>
+export type ListAdminAppointmentsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List appointments for a user (active only by default)
+ */
+
+export function useListAdminAppointments<TData = Awaited<ReturnType<typeof listAdminAppointments>>, TError = ErrorType<ErrorResponse>>(
+ id: string,
+    params?: ListAdminAppointmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAppointments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAppointmentsQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/appointments`
+}
+
+/**
+ * @summary Create an appointment
+ */
+export const createAdminAppointment = async (id: string,
+    appointmentCreateRequest: AppointmentCreateRequest, options?: RequestInit): Promise<AppointmentResponse> => {
+
+  return customFetch<AppointmentResponse>(getCreateAdminAppointmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appointmentCreateRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminAppointmentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminAppointment>>, TError,{id: string;data: BodyType<AppointmentCreateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminAppointment>>, TError,{id: string;data: BodyType<AppointmentCreateRequest>}, TContext> => {
+
+const mutationKey = ['createAdminAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminAppointment>>, {id: string;data: BodyType<AppointmentCreateRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createAdminAppointment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminAppointment>>>
+    export type CreateAdminAppointmentMutationBody = BodyType<AppointmentCreateRequest>
+    export type CreateAdminAppointmentMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an appointment
+ */
+export const useCreateAdminAppointment = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminAppointment>>, TError,{id: string;data: BodyType<AppointmentCreateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminAppointment>>,
+        TError,
+        {id: string;data: BodyType<AppointmentCreateRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminAppointmentMutationOptions(options));
+    }
+
+export const getGetAdminAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/appointments/${id}`
+}
+
+/**
+ * @summary Get an appointment
+ */
+export const getAdminAppointment = async (id: string, options?: RequestInit): Promise<AppointmentResponse> => {
+
+  return customFetch<AppointmentResponse>(getGetAdminAppointmentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminAppointmentQueryKey = (id: string,) => {
+    return [
+    `/api/admin/appointments/${id}`
+    ] as const;
+    }
+
+
+export const getGetAdminAppointmentQueryOptions = <TData = Awaited<ReturnType<typeof getAdminAppointment>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminAppointment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminAppointmentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminAppointment>>> = ({ signal }) => getAdminAppointment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminAppointment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminAppointmentQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminAppointment>>>
+export type GetAdminAppointmentQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get an appointment
+ */
+
+export function useGetAdminAppointment<TData = Awaited<ReturnType<typeof getAdminAppointment>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminAppointment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminAppointmentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/appointments/${id}`
+}
+
+/**
+ * @summary Update an appointment
+ */
+export const updateAdminAppointment = async (id: string,
+    appointmentUpdateRequest: AppointmentUpdateRequest, options?: RequestInit): Promise<AppointmentResponse> => {
+
+  return customFetch<AppointmentResponse>(getUpdateAdminAppointmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appointmentUpdateRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminAppointmentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminAppointment>>, TError,{id: string;data: BodyType<AppointmentUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminAppointment>>, TError,{id: string;data: BodyType<AppointmentUpdateRequest>}, TContext> => {
+
+const mutationKey = ['updateAdminAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminAppointment>>, {id: string;data: BodyType<AppointmentUpdateRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAdminAppointment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminAppointment>>>
+    export type UpdateAdminAppointmentMutationBody = BodyType<AppointmentUpdateRequest>
+    export type UpdateAdminAppointmentMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update an appointment
+ */
+export const useUpdateAdminAppointment = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminAppointment>>, TError,{id: string;data: BodyType<AppointmentUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminAppointment>>,
+        TError,
+        {id: string;data: BodyType<AppointmentUpdateRequest>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminAppointmentMutationOptions(options));
+    }
+
+export const getDeleteAdminAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/appointments/${id}`
+}
+
+/**
+ * @summary Deactivate an appointment (soft delete)
+ */
+export const deleteAdminAppointment = async (id: string, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getDeleteAdminAppointmentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminAppointmentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminAppointment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminAppointment>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteAdminAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminAppointment>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAdminAppointment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminAppointment>>>
+
+    export type DeleteAdminAppointmentMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Deactivate an appointment (soft delete)
+ */
+export const useDeleteAdminAppointment = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminAppointment>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminAppointment>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminAppointmentMutationOptions(options));
+    }
+
 export const getTabletSetupUrl = () => {
 
 
@@ -1566,4 +2418,76 @@ export function useGetTabletToday<TData = Awaited<ReturnType<typeof getTabletTod
 
 
 
+
+export const getRespondToOccurrenceUrl = (id: string,) => {
+
+
+
+
+  return `/api/tablet/occurrences/${id}/respond`
+}
+
+/**
+ * @summary Record a medication confirmation (YES/NO/UNKNOWN) on a triggered occurrence
+ */
+export const respondToOccurrence = async (id: string,
+    occurrenceRespondRequest: OccurrenceRespondRequest, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getRespondToOccurrenceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(occurrenceRespondRequest)
+  }
+);}
+
+
+
+
+
+export const getRespondToOccurrenceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof respondToOccurrence>>, TError,{id: string;data: BodyType<OccurrenceRespondRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof respondToOccurrence>>, TError,{id: string;data: BodyType<OccurrenceRespondRequest>}, TContext> => {
+
+const mutationKey = ['respondToOccurrence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof respondToOccurrence>>, {id: string;data: BodyType<OccurrenceRespondRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  respondToOccurrence(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RespondToOccurrenceMutationResult = NonNullable<Awaited<ReturnType<typeof respondToOccurrence>>>
+    export type RespondToOccurrenceMutationBody = BodyType<OccurrenceRespondRequest>
+    export type RespondToOccurrenceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record a medication confirmation (YES/NO/UNKNOWN) on a triggered occurrence
+ */
+export const useRespondToOccurrence = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof respondToOccurrence>>, TError,{id: string;data: BodyType<OccurrenceRespondRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof respondToOccurrence>>,
+        TError,
+        {id: string;data: BodyType<OccurrenceRespondRequest>},
+        TContext
+      > => {
+      return useMutation(getRespondToOccurrenceMutationOptions(options));
+    }
 

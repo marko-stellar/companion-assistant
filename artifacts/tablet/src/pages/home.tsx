@@ -40,12 +40,87 @@ function getVoiceErrorMessage(error: VoiceError, t: Strings): string {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
+function MedicationButtons({
+  item,
+  t,
+  onRespond,
+}: {
+  item: TodayItem;
+  t: Strings;
+  onRespond: (occurrenceId: string, response: "YES" | "UNKNOWN" | "NO") => void;
+}) {
+  const [pending, setPending] = useState(false);
+  if (!item.occurrenceId) return null;
+  const occurrenceId = item.occurrenceId;
+
+  const handle = (response: "YES" | "UNKNOWN" | "NO") => {
+    if (pending) return;
+    setPending(true);
+    onRespond(occurrenceId, response);
+  };
+
+  const btnBase =
+    "rounded-lg px-3 py-2 text-sm transition-all active:scale-95 shrink-0";
+
+  return (
+    <span className="flex items-center gap-2 shrink-0">
+      <button
+        onClick={() => handle("YES")}
+        disabled={pending}
+        className={btnBase}
+        style={{
+          background: "rgba(110,170,110,0.18)",
+          border: "1px solid rgba(110,170,110,0.35)",
+          color: "rgba(180,225,180,0.9)",
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.5 : 1,
+        }}
+        aria-label={t.medTaken}
+      >
+        ✓ {t.medTaken}
+      </button>
+      <button
+        onClick={() => handle("UNKNOWN")}
+        disabled={pending}
+        className={btnBase}
+        style={{
+          background: "rgba(200,175,110,0.14)",
+          border: "1px solid rgba(200,175,110,0.3)",
+          color: "rgba(230,210,160,0.85)",
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.5 : 1,
+        }}
+        aria-label={t.medNotSure}
+      >
+        ? {t.medNotSure}
+      </button>
+      <button
+        onClick={() => handle("NO")}
+        disabled={pending}
+        className={btnBase}
+        style={{
+          background: "rgba(200,90,70,0.14)",
+          border: "1px solid rgba(200,90,70,0.3)",
+          color: "rgba(235,175,155,0.85)",
+          cursor: pending ? "default" : "pointer",
+          opacity: pending ? 0.5 : 1,
+        }}
+        aria-label={t.medNotTaken}
+      >
+        ✗ {t.medNotTaken}
+      </button>
+    </span>
+  );
+}
+
 function TodayList({
   items,
   t,
+  onRespond,
 }: {
   items: TodayItem[];
-  t: { todayLabel: string; noItemsToday: string; reminder: string; appointment: string };
+  t: Strings;
+  onRespond: (occurrenceId: string, response: "YES" | "UNKNOWN" | "NO") => void;
 }) {
   if (!items.length) {
     return (
@@ -63,7 +138,7 @@ function TodayList({
       {items.map((item) => (
         <li
           key={item.id}
-          className="flex items-center gap-3 rounded-xl px-4 py-3"
+          className="flex flex-wrap items-center gap-3 rounded-xl px-4 py-3"
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid rgba(255,255,255,0.06)",
@@ -82,15 +157,20 @@ function TodayList({
               background:
                 item.type === "appointment"
                   ? "rgba(120,180,220,0.8)"
-                  : "rgba(180,130,90,0.8)",
+                  : item.type === "medication"
+                    ? "rgba(150,200,140,0.8)"
+                    : "rgba(180,130,90,0.8)",
             }}
           />
           <span
             className="text-base flex-1 truncate"
-            style={{ color: "rgba(240,220,195,0.85)" }}
+            style={{ color: "rgba(240,220,195,0.85)", minWidth: 80 }}
           >
             {item.title}
           </span>
+          {item.type === "medication" && !item.done && item.occurrenceId && (
+            <MedicationButtons item={item} t={t} onRespond={onRespond} />
+          )}
         </li>
       ))}
     </ul>
@@ -332,7 +412,15 @@ export function HomePage() {
     t,
     greeting,
     activateConversation,
+    respondToItem,
   } = useDevice();
+
+  const handleRespond = (
+    occurrenceId: string,
+    response: "YES" | "UNKNOWN" | "NO",
+  ) => {
+    void respondToItem(occurrenceId, response);
+  };
 
   const orientation = useOrientation();
   const liveGreeting = useGreetingRefresh(greeting);
@@ -404,7 +492,7 @@ export function HomePage() {
             >
               {t.todayLabel}
             </p>
-            <TodayList items={todayItems} t={t} />
+            <TodayList items={todayItems} t={t} onRespond={handleRespond} />
           </div>
 
           {/* Talk button + error banner */}
@@ -457,7 +545,7 @@ export function HomePage() {
               >
                 {t.todayLabel}
               </p>
-              <TodayList items={todayItems} t={t} />
+              <TodayList items={todayItems} t={t} onRespond={handleRespond} />
             </div>
           </div>
 

@@ -8,6 +8,8 @@ import {
   tabletSetup,
   getTabletMe,
   getTabletToday,
+  respondToOccurrence,
+  type OccurrenceRespondRequestResponse,
 } from "@workspace/api-client-react";
 
 export const TOKEN_KEY = "companion:device-token";
@@ -61,6 +63,17 @@ export async function fetchTodayItems() {
   } catch {
     return { items: [] };
   }
+}
+
+/**
+ * Record a medication confirmation (YES / NO / UNKNOWN) for an occurrence.
+ * Throws on network errors or non-2xx responses.
+ */
+export async function respondOccurrence(
+  occurrenceId: string,
+  response: OccurrenceRespondRequestResponse,
+): Promise<void> {
+  await respondToOccurrence(occurrenceId, { response });
 }
 
 // ── Voice conversation ──────────────────────────────────────────────────────

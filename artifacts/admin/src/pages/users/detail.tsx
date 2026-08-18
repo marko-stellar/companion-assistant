@@ -40,6 +40,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RemindersTab } from "./tabs/reminders-tab";
+import { AppointmentsTab } from "./tabs/appointments-tab";
 
 // -----------------------------------------------------------------------------
 // PROFILE TAB
@@ -1428,8 +1430,8 @@ export function UserDetail() {
     { id: "companion", label: "Companion", icon: Bot, component: <CompanionTab user={user} /> },
     { id: "emergency", label: "Emergency", icon: Phone, component: <EmergencyContactTab userId={user.id} /> },
     { id: "dnd", label: "DND", icon: Clock, component: <DndTab userId={user.id} /> },
-    { id: "reminders", label: "Reminders", icon: Calendar, component: <PlaceholderTab title="Reminders" description="Schedule daily medicine, water, and activity reminders." icon={Calendar} /> },
-    { id: "appointments", label: "Appointments", icon: Clock, component: <PlaceholderTab title="Appointments" description="Manage upcoming doctor visits and family calls." icon={Clock} /> },
+    { id: "reminders", label: "Reminders", icon: Calendar, component: <RemindersTab userId={user.id} timezone={user.timezone} /> },
+    { id: "appointments", label: "Appointments", icon: Clock, component: <AppointmentsTab userId={user.id} timezone={user.timezone} /> },
     { id: "photos", label: "Photos", icon: ImageIcon, component: <PlaceholderTab title="Photo Gallery" description="Upload familiar faces and places for the companion to reference." icon={ImageIcon} /> },
     { id: "memories", label: "Memories", icon: Brain, component: <MemoriesTab userId={user.id} /> },
     { id: "routines", label: "Routines", icon: ListChecks, component: <PlaceholderTab title="Daily Routines" description="Set up morning and evening rituals." icon={ListChecks} /> },

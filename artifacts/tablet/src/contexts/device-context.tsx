@@ -18,8 +18,10 @@ import {
   clearToken,
   fetchDeviceContext,
   fetchTodayItems,
+  respondOccurrence,
   converse,
 } from "@/lib/device-api";
+import type { OccurrenceRespondRequestResponse } from "@workspace/api-client-react";
 import { getStrings, getGreeting, type Strings } from "@/lib/i18n";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -68,6 +70,14 @@ interface DeviceContextValue {
    * playing  → stop playback, start new recording (barge-in)
    */
   activateConversation: () => Promise<void>;
+  /**
+   * Record a medication confirmation for a today-list item.
+   * Optimistically marks the item done, then re-fetches today's items.
+   */
+  respondToItem: (
+    occurrenceId: string,
+    response: OccurrenceRespondRequestResponse,
+  ) => Promise<void>;
 }
 
 const DeviceCtx = createContext<DeviceContextValue | null>(null);
@@ -207,6 +217,30 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  const respondToItem = useCallback(
+    async (
+      occurrenceId: string,
+      response: OccurrenceRespondRequestResponse,
+    ) => {
+      // Optimistic: mark the item done immediately
+      setTodayItems((prev) =>
+        prev.map((i) =>
+          i.occurrenceId === occurrenceId ? { ...i, done: true } : i,
+        ),
+      );
+      try {
+        await respondOccurrence(occurrenceId, response);
+      } catch {
+        // Server refused (e.g. not yet triggered / already answered) or
+        // network error — the refetch below restores the true state.
+      }
+      // Refresh so the list reflects the backend's done state
+      const { items } = await fetchTodayItems();
+      setTodayItems(items);
+    },
+    [],
+  );
 
   const clearAutoStopTimer = useCallback(() => {
     if (autoStopTimerRef.current) {
@@ -385,6 +419,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         greeting,
         onSetupComplete,
         activateConversation,
+        respondToItem,
       }}
     >
       {children}

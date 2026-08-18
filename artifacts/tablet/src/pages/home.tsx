@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useDevice, type VoiceError } from "@/contexts/device-context";
 import { AmbientOrb } from "@/components/ambient-orb";
-import type { TodayItem, AppointmentAlert } from "@workspace/api-client-react";
+import type { TodayItem } from "@workspace/api-client-react";
 import type { Strings } from "@/lib/i18n";
+import { getActiveAlerts, type AppointmentAlertItem } from "@/lib/alerts";
 
 // ── Appointment pre-alert helpers ───────────────────────────────────────────
 
@@ -23,37 +24,6 @@ function useMinuteClock(): Date {
     };
   }, []);
   return now;
-}
-
-interface AppointmentAlertItem {
-  id: string;
-  title: string;
-  minutesUntil: number;
-}
-
-/**
- * Filters server-provided alerts to those still in-window right now and
- * attaches a live minutesUntil countdown. The server already did the heavy
- * lifting (cross-day boundary check included); we re-check here so the
- * banner disappears promptly when the window closes between fetches.
- */
-function getActiveAlerts(
-  alerts: AppointmentAlert[],
-  now: Date,
-): AppointmentAlertItem[] {
-  const results: AppointmentAlertItem[] = [];
-  for (const alert of alerts) {
-    const minutesUntil =
-      (new Date(alert.startsAtUtc).getTime() - now.getTime()) / 60_000;
-    if (minutesUntil > 0 && minutesUntil <= alert.reminderMinutesBefore) {
-      results.push({
-        id: alert.id,
-        title: alert.title,
-        minutesUntil: Math.ceil(minutesUntil),
-      });
-    }
-  }
-  return results;
 }
 
 function AppointmentAlertBanner({

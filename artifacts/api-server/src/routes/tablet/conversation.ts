@@ -19,13 +19,15 @@
  */
 
 import { Router } from "express";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import {
   db,
   users,
   companions,
   conversations,
   conversationMessages,
+  photos,
+  memories,
 } from "@workspace/db";
 import { requireDevice } from "../../middlewares/requireDevice";
 import {
@@ -51,10 +53,13 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     audio,
     mimeType: reqMimeType,
     conversationId: existingConvId,
+    activePhotoId,
   } = req.body as {
     audio?: string;
     mimeType?: string;
     conversationId?: string;
+    /** UUID of the photo currently visible on the tablet screen (if any). */
+    activePhotoId?: string;
   };
 
   if (!audio || typeof audio !== "string") {
@@ -140,7 +145,37 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     void routineService.resolveOpenDeviations(userId, new Date()).catch(() => {});
   }
 
-  // ── 5. Build bounded context window (with retrieved memories) ────────────
+  // ── 5. Load photo context + available photos ──────────────────────────────
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const safeActivePhotoId = activePhotoId && UUID_RE.test(activePhotoId) ? activePhotoId : undefined;
+
+  const [availablePhotos, activePhotoCtx] = await Promise.all([
+    db.select().from(photos).where(eq(photos.userId, userId)).orderBy(desc(photos.createdAt)).limit(30),
+    safeActivePhotoId
+      ? (async () => {
+          const [photo] = await db
+            .select()
+            .from(photos)
+            .where(and(eq(photos.id, safeActivePhotoId), eq(photos.userId, userId)))
+            .limit(1);
+          if (!photo) return undefined;
+          const photoMems = await db
+            .select()
+            .from(memories)
+            .where(
+              and(
+                eq(memories.userId, userId),
+                eq(memories.photoId, safeActivePhotoId),
+                eq(memories.isActive, true),
+              ),
+            )
+            .limit(20);
+          return { photo, photoMemories: photoMems };
+        })()
+      : Promise.resolve(undefined),
+  ]);
+
+  // ── 6. Build bounded context window (with retrieved memories + photo) ─────
   const { systemPrompt, recentMessages } =
     await conversationContextService.buildContext({
       userId,
@@ -148,6 +183,8 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
       conversationId: convId,
       language: effectiveLang,
       userTranscript: transcript,
+      activePhotoContext: activePhotoCtx,
+      availablePhotos,
     });
 
   const toolsSection = buildToolsPromptSection(effectiveLang);
@@ -159,10 +196,12 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     { role: "user" as const, content: transcript },
   ];
 
-  // ── 6. LLM turn with tool support ─────────────────────────────────────────
+  // ── 7. LLM turn with tool support ─────────────────────────────────────────
   const llmStart = Date.now();
   let reply: string;
   let tokenUsage: { promptTokens: number; completionTokens: number } | undefined;
+  let responsePhotoUrl: string | undefined;
+  let responsePhotoId: string | undefined;
 
   try {
     const firstResult = await llmProvider.respondWithTools({
@@ -173,7 +212,7 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     });
 
     if (firstResult.type === "tool_call") {
-      // ── 6a. Execute the tool ─────────────────────────────────────────────
+      // ── 7a. Execute the tool ─────────────────────────────────────────────
       req.log.info({ tool: firstResult.toolName, userId }, "Tool call detected");
 
       const toolResult = await toolExecutor.execute(
@@ -181,9 +220,15 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
         { userId, timezone, conversationId: convId },
       );
 
+      // Capture photo URL when show_photo succeeds
+      if (toolResult.ok && toolResult.data?.photoUrl) {
+        responsePhotoUrl = toolResult.data.photoUrl as string;
+        responsePhotoId = toolResult.data.photoId as string | undefined;
+      }
+
       tokenUsage = firstResult.usage;
 
-      // ── 6b. Ask LLM to produce a natural-language confirmation ───────────
+      // ── 7b. Ask LLM to produce a natural-language confirmation ───────────
       const resultMessage = toolResult.ok
         ? `[Tool ${firstResult.toolName} succeeded. Confirm naturally: "${toolResult.confirmationHint}"]`
         : `[Tool ${firstResult.toolName} failed: "${toolResult.error}". Apologise briefly and explain.]`;
@@ -210,11 +255,17 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
       }
 
     } else {
-      // ── 6c. Plain text response — check for inline <tool_call> block ─────
+      // ── 7c. Plain text response — check for inline <tool_call> block ─────
       const inlineToolCall = parseToolCall(firstResult.content);
       if (inlineToolCall) {
         req.log.info({ tool: inlineToolCall.tool, userId }, "Inline tool call parsed");
         const toolResult = await toolExecutor.execute(inlineToolCall, { userId, timezone, conversationId: convId });
+
+        // Capture photo URL when show_photo succeeds
+        if (toolResult.ok && toolResult.data?.photoUrl) {
+          responsePhotoUrl = toolResult.data.photoUrl as string;
+          responsePhotoId = toolResult.data.photoId as string | undefined;
+        }
 
         const resultMessage = toolResult.ok
           ? `[Tool ${inlineToolCall.tool} succeeded. Confirm naturally: "${toolResult.confirmationHint}"]`
@@ -329,6 +380,8 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     conversationId: convId,
     messageId: userMsg?.id,
     language: effectiveLang,
+    // Link memories to the active photo (pre-existing or just shown via tool)
+    photoId: activePhotoCtx?.photo.id ?? responsePhotoId,
   });
 
   // ── 11. Privacy-safe log ──────────────────────────────────────────────────
@@ -353,6 +406,8 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     audio: replyAudioBuffer.toString("base64"),
     mimeType: replyMimeType,
     conversationId: convId,
+    // Present when show_photo was called successfully this turn
+    ...(responsePhotoUrl ? { photoUrl: responsePhotoUrl, photoId: responsePhotoId } : {}),
   });
 });
 

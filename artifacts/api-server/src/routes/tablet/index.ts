@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { Router } from "express";
 import { eq, and, isNull, isNotNull, gt } from "drizzle-orm";
-import { db, deviceSetupCodes, deviceSessions, users, companions, dndPeriods, routineDeviations } from "@workspace/db";
+import { db, deviceSetupCodes, deviceSessions, users, companions, dndPeriods, routineDeviations, photos } from "@workspace/db";
 import { requireDevice } from "../../middlewares/requireDevice";
 import { remindersService } from "../../domains/reminders";
 import { routineService } from "../../domains/routine";
@@ -242,6 +242,27 @@ router.post(
     res.json({ ok: true });
   },
 );
+
+// GET /tablet/photos/:photoId/url — short-lived signed read URL for a photo
+router.get("/photos/:photoId/url", requireDevice, async (req, res): Promise<void> => {
+  const userId = req.deviceUserId!;
+  const photoId = String(req.params.photoId);
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(photoId)) { res.status(404).json({ error: "Not found" }); return; }
+
+  const [photo] = await db.select().from(photos).where(and(eq(photos.id, photoId), eq(photos.userId, userId))).limit(1);
+  if (!photo) { res.status(404).json({ error: "Photo not found" }); return; }
+
+  try {
+    const { ObjectStorageService } = await import("../../lib/objectStorage");
+    const svc = new ObjectStorageService();
+    const url = await svc.getObjectEntityReadURL(photo.objectKey, 3600);
+    res.json({ url, expiresInSeconds: 3600 });
+  } catch (err) {
+    req.log.error({ err, photoId }, "Failed to generate signed URL");
+    res.status(500).json({ error: "Failed to generate photo URL" });
+  }
+});
 
 // Voice conversation loop — POST /tablet/converse
 router.use(conversationRouter);

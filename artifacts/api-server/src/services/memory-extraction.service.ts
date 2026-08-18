@@ -85,14 +85,16 @@ export class MemoryExtractionService {
     conversationId: string;
     messageId?: string;
     language: string;
+    /** When set, extracted memories are linked to this photo. */
+    photoId?: string;
   }): Promise<void> {
-    const { userId, transcript, conversationId, messageId, language } = params;
+    const { userId, transcript, conversationId, messageId, language, photoId } = params;
 
     // Skip very short utterances (greetings, acknowledgements)
     if (transcript.trim().length < 15) return;
 
     try {
-      await this.doExtract({ userId, transcript, conversationId, messageId, language });
+      await this.doExtract({ userId, transcript, conversationId, messageId, language, photoId });
     } catch (err) {
       // Never crash the voice loop
       logger.error({ err, userId, conversationId }, "Memory extraction failed");
@@ -105,8 +107,9 @@ export class MemoryExtractionService {
     conversationId: string;
     messageId?: string;
     language: string;
+    photoId?: string;
   }): Promise<void> {
-    const { userId, transcript, conversationId, messageId } = params;
+    const { userId, transcript, conversationId, messageId, photoId } = params;
 
     // Ask LLM to extract memories
     const { content: raw } = await llmProvider.respond({
@@ -141,7 +144,7 @@ export class MemoryExtractionService {
     // Process new memories
     for (const mem of result.memories ?? []) {
       if (mem.confidence < CONFIDENCE_THRESHOLD_STORE) continue;
-      await this.storeMemory({ userId, mem, conversationId, messageId });
+      await this.storeMemory({ userId, mem, conversationId, messageId, photoId });
     }
   }
 
@@ -228,8 +231,9 @@ export class MemoryExtractionService {
     conversationId: string;
     messageId?: string;
     sourceType?: string;
+    photoId?: string;
   }): Promise<void> {
-    const { userId, mem, conversationId, messageId, sourceType = "conversation" } = params;
+    const { userId, mem, conversationId, messageId, photoId, sourceType = photoId ? "photo" : "conversation" } = params;
 
     // Duplicate check: is there already an active memory with this subject + very similar fact?
     if (mem.subject) {
@@ -253,7 +257,7 @@ export class MemoryExtractionService {
 
     await db.insert(memories).values({
       userId,
-      type: mem.type,
+      type: photoId ? "PHOTO_MEMORY" : mem.type,
       subject: mem.subject ?? null,
       fact: mem.fact,
       confidence: Math.max(0, Math.min(1, mem.confidence)),
@@ -261,6 +265,7 @@ export class MemoryExtractionService {
       sourceType,
       sourceConversationId: conversationId,
       sourceMessageId: messageId ?? null,
+      photoId: photoId ?? null,
       embedding: embedding ?? undefined,
       isActive: true,
     });

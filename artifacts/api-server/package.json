@@ -15,9 +15,9 @@
     "create-admin": "tsx src/scripts/create-admin.ts"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.0.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
-    "zod": "catalog:",
     "bcryptjs": "^2.4.3",
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
@@ -25,8 +25,10 @@
     "drizzle-orm": "catalog:",
     "express": "^5.2.1",
     "express-session": "^1.18.1",
+    "google-auth-library": "^11.0.2",
     "pino": "^9.14.0",
-    "pino-http": "^10.5.0"
+    "pino-http": "^10.5.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

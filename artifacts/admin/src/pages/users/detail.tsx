@@ -43,6 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RemindersTab } from "./tabs/reminders-tab";
 import { RoutinesTab } from "./tabs/routines-tab";
 import { AppointmentsTab } from "./tabs/appointments-tab";
+import { PhotosTab } from "./tabs/photos-tab";
 
 // -----------------------------------------------------------------------------
 // PROFILE TAB
@@ -1433,7 +1434,7 @@ export function UserDetail() {
     { id: "dnd", label: "DND", icon: Clock, component: <DndTab userId={user.id} /> },
     { id: "reminders", label: "Reminders", icon: Calendar, component: <RemindersTab userId={user.id} timezone={user.timezone} /> },
     { id: "appointments", label: "Appointments", icon: Clock, component: <AppointmentsTab userId={user.id} timezone={user.timezone} /> },
-    { id: "photos", label: "Photos", icon: ImageIcon, component: <PlaceholderTab title="Photo Gallery" description="Upload familiar faces and places for the companion to reference." icon={ImageIcon} /> },
+    { id: "photos", label: "Photos", icon: ImageIcon, component: <PhotosTab userId={user.id} /> },
     { id: "memories", label: "Memories", icon: Brain, component: <MemoriesTab userId={user.id} /> },
     { id: "routines", label: "Routines", icon: ListChecks, component: <RoutinesTab userId={user.id} /> },
     { id: "conversations", label: "Conversations", icon: MessageSquare, component: <ConversationsTab userId={user.id} /> },

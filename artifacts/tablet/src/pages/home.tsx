@@ -627,6 +627,8 @@ export function HomePage() {
     greeting,
     activateConversation,
     respondToItem,
+    pendingPhotoUrl,
+    clearPendingPhoto,
   } = useDevice();
 
   const handleRespond = (
@@ -654,6 +656,34 @@ export function HomePage() {
       className="relative min-h-screen overflow-hidden"
       style={{ background: "#0e0b08" }}
     >
+      {/* Photo fullscreen overlay — shown when companion calls show_photo */}
+      {pendingPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.92)" }}
+        >
+          <img
+            src={pendingPhotoUrl}
+            alt="Photo"
+            className="max-w-[92vw] max-h-[82vh] rounded-2xl shadow-2xl object-contain"
+          />
+          <button
+            onClick={clearPendingPhoto}
+            className="mt-6 rounded-2xl px-10 py-4 text-lg tracking-wide transition-all active:scale-[0.97]"
+            style={{
+              background: "rgba(180,130,90,0.82)",
+              color: "rgba(255,240,215,0.95)",
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              boxShadow: "0 4px 40px rgba(180,130,90,0.25)",
+            }}
+          >
+            Close
+          </button>
+        </div>
+      )}
+
       {/* Offline overlay */}
       {!isOnline && <OfflineOverlay t={t} />}
 

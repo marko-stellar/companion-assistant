@@ -11,7 +11,9 @@
  *   4. Today's reminders and appointments (if any)
  *   5. DND state (if active)
  *   6. Relevant retrieved memories (top-k via semantic search or recency fallback)
- *   7. Behavioural rules
+ *   7. Photo being discussed (when activePhotoId is provided)
+ *   8. Available photos (short list for LLM to reference in show_photo tool)
+ *   9. Behavioural rules
  *
  * Then returns the bounded recent-message window for the message list.
  */
@@ -24,8 +26,10 @@ import {
   conversationMessages,
   dndPeriods,
   temporaryDnd,
+  photos,
+  memories,
 } from "@workspace/db";
-import type { Memory } from "@workspace/db";
+import type { Memory, Photo } from "@workspace/db";
 import type { Message } from "../providers/llm.provider";
 import { memoryRetrievalService } from "./memory-retrieval.service";
 import { scheduleService, type TodayItem } from "./schedule.service";
@@ -35,6 +39,12 @@ const CONTEXT_WINDOW = parseInt(
   10,
 );
 
+/** Photo currently being discussed in the conversation. */
+export interface ActivePhotoContext {
+  photo: Photo;
+  photoMemories: Memory[];
+}
+
 export interface ConversationContext {
   systemPrompt: string;
   recentMessages: Message[];
@@ -43,12 +53,14 @@ export interface ConversationContext {
 export class ConversationContextService {
   /**
    * Build the full context for one LLM turn.
-   * @param userId         — authenticated senior user
-   * @param companion      — companion row (may be null if unassigned)
-   * @param conversationId — current session ID (used to load recent messages)
-   * @param language       — effective language for this turn ("hr" | "en")
-   * @param userTranscript — current user message (used for memory retrieval query)
-   * @param maxMessages    — max recent messages to include (defaults to env var)
+   * @param userId           — authenticated senior user
+   * @param companion        — companion row (may be null if unassigned)
+   * @param conversationId   — current session ID (used to load recent messages)
+   * @param language         — effective language for this turn ("hr" | "en")
+   * @param userTranscript   — current user message (used for memory retrieval query)
+   * @param maxMessages      — max recent messages to include (defaults to env var)
+   * @param activePhotoContext — photo currently visible on the tablet (if any)
+   * @param availablePhotos  — all photos for this user (for AVAILABLE PHOTOS list)
    */
   async buildContext(params: {
     userId: string;
@@ -57,6 +69,8 @@ export class ConversationContextService {
     language: string;
     userTranscript?: string;
     maxMessages?: number;
+    activePhotoContext?: ActivePhotoContext;
+    availablePhotos?: Photo[];
   }): Promise<ConversationContext> {
     const {
       userId,
@@ -65,6 +79,8 @@ export class ConversationContextService {
       language,
       userTranscript,
       maxMessages = CONTEXT_WINDOW,
+      activePhotoContext,
+      availablePhotos,
     } = params;
 
     // Fetch user first so we have their timezone for schedule queries
@@ -128,6 +144,8 @@ export class ConversationContextService {
       activeDnd,
       activeTemporaryDnd,
       relevantMemories,
+      activePhotoContext,
+      availablePhotos: availablePhotos ?? [],
     });
 
     return { systemPrompt, recentMessages };
@@ -141,8 +159,13 @@ export class ConversationContextService {
     activeDnd: typeof dndPeriods.$inferSelect | null;
     activeTemporaryDnd: typeof temporaryDnd.$inferSelect | null;
     relevantMemories: Memory[];
+    activePhotoContext?: ActivePhotoContext;
+    availablePhotos: Photo[];
   }): string {
-    const { companion, user, language, todaySchedule, activeDnd, activeTemporaryDnd, relevantMemories } = params;
+    const {
+      companion, user, language, todaySchedule, activeDnd, activeTemporaryDnd,
+      relevantMemories, activePhotoContext, availablePhotos,
+    } = params;
     const parts: string[] = [];
 
     // ── 1. Companion identity ──────────────────────────────────────────────
@@ -160,8 +183,8 @@ export class ConversationContextService {
         user.preferredFormOfAddress ||
         user.firstName ||
         user.displayName;
-      const timezone = user.timezone ?? "UTC";
-      const localNow = this.formatLocalTime(new Date(), timezone);
+      const tz = user.timezone ?? "UTC";
+      const localNow = this.formatLocalTime(new Date(), tz);
       parts.push(
         `\nUSER PROFILE:\nThe person you are speaking with is called ${address}.`,
       );
@@ -182,7 +205,6 @@ export class ConversationContextService {
     if (todaySchedule.length > 0) {
       const lines = todaySchedule
         .map(s => {
-          // Include occurrenceId for medication items so tools can reference them
           const occPart = s.type === "medication" && s.occurrenceId
             ? `  occurrenceId: ${s.occurrenceId}`
             : "";
@@ -211,13 +233,51 @@ export class ConversationContextService {
       );
     }
 
-    // ── 6. Relevant memories (top-k, bounded) ─────────────────────────────
-    // Only high-confidence memories (≥ 0.5) are injected; lower ones are skipped.
-    // The full memory store is never dumped — only what's retrieved for this turn.
+    // ── 6. Relevant memories ──────────────────────────────────────────────
     const memoriesText = memoryRetrievalService.formatForPrompt(relevantMemories);
     parts.push(`\nRELEVANT MEMORIES:\n${memoriesText}`);
 
-    // ── 7. Behavioural rules ──────────────────────────────────────────────
+    // ── 7. Active photo context ───────────────────────────────────────────
+    if (activePhotoContext) {
+      const { photo, photoMemories: pMems } = activePhotoContext;
+      const metaParts = [
+        photo.title ? `Title: ${photo.title}` : null,
+        photo.approxDate ? `Approximate date: ${photo.approxDate}` : null,
+        photo.location ? `Location: ${photo.location}` : null,
+        photo.notes ? `Admin notes: ${photo.notes}` : null,
+      ].filter(Boolean).join("\n");
+
+      parts.push(
+        `\nPHOTO CURRENTLY ON SCREEN:\n` +
+        `${metaParts}\n` +
+        (photo.visionDescription ? `Vision description: ${photo.visionDescription}` : "Vision description: not yet available.") +
+        `\n\n⚠️  IDENTITY RULE: Do NOT identify, name, or infer the identity of any person visible in this photo based on their appearance alone. ` +
+        `Identity may ONLY come from the admin notes above or from what the user explicitly tells you during this conversation. ` +
+        `If asked who someone is, say you are not sure and ask the user to tell you.`,
+      );
+
+      if (pMems.length > 0) {
+        const memLines = pMems.map(m => `  • ${m.fact}`).join("\n");
+        parts.push(`\nWHAT THE USER HAS SHARED ABOUT THIS PHOTO:\n${memLines}`);
+      }
+    }
+
+    // ── 8. Available photos ───────────────────────────────────────────────
+    if (availablePhotos.length > 0) {
+      const photoLines = availablePhotos.slice(0, 20).map(p => {
+        const meta = [
+          p.title ? `"${p.title}"` : "(untitled)",
+          p.approxDate ?? null,
+          p.location ?? null,
+        ].filter(Boolean).join(" | ");
+        return `  • ID: ${p.id}  ${meta}`;
+      }).join("\n");
+      parts.push(
+        `\nAVAILABLE PHOTOS (use show_photo tool to display one):\n${photoLines}`,
+      );
+    }
+
+    // ── 9. Behavioural rules ──────────────────────────────────────────────
     parts.push(`\nRULES:
 - You are speaking with an older person (65–75 years old). Be warm, patient, and clear.
 - Keep replies to 1–3 sentences. Never ramble or lecture.
@@ -251,8 +311,7 @@ export class ConversationContextService {
 
   /**
    * Formatted today-schedule for external callers (LLM context layer).
-   * Delegates to ScheduleService, which owns the real reminders/appointments
-   * queries.
+   * Delegates to ScheduleService, which owns the real reminders/appointments queries.
    */
   async getTodaySchedule(userId: string): Promise<string> {
     return scheduleService.getTodaySchedule(userId);

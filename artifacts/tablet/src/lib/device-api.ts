@@ -1,187 +1,176 @@
 /**
- * Typed API helpers for the tablet app.
- * Uses the generated customFetch from @workspace/api-client-react,
- * configured with a Bearer token getter that reads from localStorage.
+ * device-api.ts — HTTP helpers for the tablet client.
+ *
+ * All requests include the Bearer auth token from localStorage.
+ * The base URL is derived from import.meta.env.BASE_URL so the helper works
+ * behind the Replit path-prefix proxy (e.g. /tablet/).
  */
-import {
-  setAuthTokenGetter,
-  tabletSetup,
-  getTabletMe,
-  getTabletToday,
-  respondToOccurrence,
-  type OccurrenceRespondRequestResponse,
+
+import type {
+  TabletContext,
+  TodayItem,
 } from "@workspace/api-client-react";
 
-export const TOKEN_KEY = "companion:device-token";
+export type { TabletContext, TodayItem };
 
-/** Must be called once at app startup, before any API call. */
-export function initDeviceAuth(): void {
-  setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY));
+// ── Local type stubs for types not yet in the generated client ────────────────
+// Remove these stubs once the API client is regenerated after the relevant
+// routes are added to the OpenAPI spec.
+
+/** Appointment alert — appointment that is approaching its start time. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AppointmentAlert = any;
+
+/** Response value for a medication occurrence confirmation. */
+export type OccurrenceRespondRequestResponse = "YES" | "NO" | "UNKNOWN";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, ""); // e.g. "/tablet"
+
+let authTokenGetter: (() => string | null) | null = null;
+
+export function setAuthTokenGetter(getter: () => string | null) {
+  authTokenGetter = getter;
 }
+
+function getToken(): string | null {
+  return authTokenGetter ? authTokenGetter() : null;
+}
+
+function authHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { ...authHeaders() },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(body || `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    const msg = (json as { error?: string })?.error ?? `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
 export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function saveToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+  return localStorage.getItem("device_token");
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
-/** Consume a one-time setup code and persist the returned device token. */
-export async function setupDevice(code: string) {
-  const result = await tabletSetup({ code: code.trim().toUpperCase() });
-  saveToken(result.token);
-  return result;
-}
-
-/** Fetch current user + companion + DND context. Returns null if token is invalid. */
-export async function fetchDeviceContext() {
-  try {
-    return await getTabletMe();
-  } catch (err: unknown) {
-    if (
-      err &&
-      typeof err === "object" &&
-      "response" in err &&
-      (err as { response: { status: number } }).response?.status === 401
-    ) {
-      clearToken();
-      return null;
-    }
-    throw err;
-  }
-}
-
-/** Fetch today's schedule items and active appointment alerts. */
-export async function fetchTodayItems() {
-  try {
-    return await getTabletToday();
-  } catch {
-    return { items: [], upcomingAlerts: [] };
-  }
+  localStorage.removeItem("device_token");
 }
 
 /**
- * Record a medication confirmation (YES / NO / UNKNOWN) for an occurrence.
- * Throws on network errors or non-2xx responses.
+ * No-op initialiser kept for backward compat with device-context init flow.
+ * Actual auth state is checked by reading getStoredToken() directly.
  */
+export function initDeviceAuth(): void {
+  // Token is persisted in localStorage; nothing to initialise asynchronously.
+}
+
+/**
+ * Pair this device with a senior's account via a one-time setup code.
+ * On success, stores the auth token in localStorage.
+ */
+export async function setupDevice(setupCode: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/tablet/auth/setup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ setupCode }),
+  });
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    const msg = (json as { error?: string })?.error ?? `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  const data = (await res.json()) as { token: string };
+  localStorage.setItem("device_token", data.token);
+}
+
+// ── Context / today ───────────────────────────────────────────────────────────
+
+export async function fetchDeviceContext(): Promise<TabletContext> {
+  return apiGet<TabletContext>("/api/tablet/context");
+}
+
+export async function fetchTodayItems(): Promise<{
+  items: TodayItem[];
+  upcomingAlerts: AppointmentAlert[];
+}> {
+  type Resp = { items: TodayItem[]; upcomingAlerts: AppointmentAlert[] };
+  return apiGet<Resp>("/api/tablet/today");
+}
+
 export async function respondOccurrence(
   occurrenceId: string,
   response: OccurrenceRespondRequestResponse,
 ): Promise<void> {
-  await respondToOccurrence(occurrenceId, { response });
+  await apiPost(`/api/tablet/reminders/${occurrenceId}/respond`, { response });
 }
 
-// ── Voice conversation ──────────────────────────────────────────────────────
+// ── Conversation ──────────────────────────────────────────────────────────────
 
 export interface ConverseRequest {
-  /** Base64-encoded audio blob (webm/ogg/mp4 depending on browser support). */
   audio: string;
-  /** MIME type of the audio blob, e.g. "audio/webm;codecs=opus". */
   mimeType: string;
-  /** Persist context across turns. Pass null on first turn of a new session. */
   conversationId?: string;
+  /** UUID of the photo currently visible on the tablet screen. */
+  activePhotoId?: string;
 }
 
 export interface ConverseResponse {
-  /** What the user actually said (from STT). */
   transcript: string;
-  /** The companion's text reply (from LLM). */
   reply: string;
-  /** Base64-encoded audio of the reply (from TTS). Empty string if TTS failed. */
   audio: string;
-  /** MIME type of the reply audio, e.g. "audio/mpeg" or "audio/wav". */
   mimeType: string;
-  /** Conversation session ID — pass back on subsequent turns. */
   conversationId: string;
+  /** Signed URL when the LLM called show_photo this turn. */
+  photoUrl?: string;
+  /** Photo UUID corresponding to photoUrl. */
+  photoId?: string;
 }
 
-/**
- * Send recorded audio to the backend conversation route.
- * Returns the companion's audio reply plus the transcript and text.
- * Throws on network errors or non-2xx responses.
- */
 export async function converse(req: ConverseRequest): Promise<ConverseResponse> {
-  const token = getStoredToken();
-  const res = await fetch("/api/tablet/converse", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(req),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(
-      typeof data.error === "string" ? data.error : "Conversation request failed",
-    );
-  }
-
-  return res.json() as Promise<ConverseResponse>;
+  return apiPost<ConverseResponse>("/api/tablet/converse", req);
 }
 
-// ── Proactive speech (spoken reminders) ─────────────────────────────────────
-
-export interface SpeakResponse {
-  /** Base64-encoded audio of the synthesized text. */
-  audio: string;
-  /** MIME type of the audio, e.g. "audio/mpeg". */
-  mimeType: string;
+export async function synthesizeSpeech(
+  text: string,
+): Promise<{ audio: string; mimeType: string }> {
+  return apiPost<{ audio: string; mimeType: string }>("/api/tablet/speak", { text });
 }
 
-/**
- * Synthesize short text with the companion's voice (no STT/LLM round-trip).
- * Used for proactive spoken alerts such as appointment reminders.
- * Throws on network errors or non-2xx responses.
- */
-// ── Routine check-in ─────────────────────────────────────────────────────────
+// ── Check-in ──────────────────────────────────────────────────────────────────
 
-export type PendingCheckIn =
-  | { pending: false }
-  | { pending: true; id: string; text: string; detectedAtUtc: string | null };
-
-/** Poll for the oldest unacknowledged routine check-in for this device's user. */
-export async function fetchPendingCheckIn(): Promise<PendingCheckIn> {
-  const token = getStoredToken();
-  const res = await fetch("/api/tablet/pending-checkin", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) return { pending: false }; // treat errors as no pending check-in
-  return res.json() as Promise<PendingCheckIn>;
+export interface PendingCheckInResult {
+  pending: true;
+  id: string;
+  text: string;
+  detectedAtUtc?: string | null;
 }
 
-/** Mark a check-in as acknowledged (called after speaking the text). */
+export type CheckInResult = PendingCheckInResult | { pending: false };
+
+export async function fetchPendingCheckIn(): Promise<CheckInResult> {
+  return apiGet<CheckInResult>("/api/tablet/pending-checkin");
+}
+
 export async function acknowledgeCheckIn(id: string): Promise<void> {
-  const token = getStoredToken();
-  await fetch(`/api/tablet/pending-checkin/${id}/acknowledge`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-}
-
-export async function synthesizeSpeech(text: string): Promise<SpeakResponse> {
-  const token = getStoredToken();
-  const res = await fetch("/api/tablet/speak", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ text }),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new Error(
-      typeof data.error === "string" ? data.error : "Speech request failed",
-    );
-  }
-
-  return res.json() as Promise<SpeakResponse>;
+  await apiPost(`/api/tablet/pending-checkin/${id}/acknowledge`, {});
 }

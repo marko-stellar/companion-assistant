@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { db, auditLogs, memories, temporaryDnd } from "@workspace/db";
+import { db, auditLogs, memories, temporaryDnd, photos } from "@workspace/db";
 import { eq, and, ilike, sql, gt } from "drizzle-orm";
 import { remindersService } from "../domains/reminders";
 import { appointmentsService } from "../domains/appointments";
@@ -16,7 +16,10 @@ import { embeddingProvider } from "../providers/embedding.provider";
 import { localToUtc, ianaZoneOrUtc } from "../lib/local-time";
 import { logger } from "../lib/logger";
 import { activityEventService } from "../services/activity-event.service";
+import { ObjectStorageService } from "../lib/objectStorage";
 import type { ToolCallRequest, ToolCallResult, ToolAuditEntry } from "./types";
+
+const objectStorageService = new ObjectStorageService();
 
 // ── Argument schemas ─────────────────────────────────────────────────────────
 
@@ -68,6 +71,10 @@ const CorrectMemoryArgs = z.object({
   supersedesFactLike: z.string().optional(),
 });
 
+const ShowPhotoArgs = z.object({
+  photoId: z.string().uuid("Must be a valid UUID"),
+});
+
 // ── Executor ─────────────────────────────────────────────────────────────────
 
 export class ToolExecutor {
@@ -85,6 +92,7 @@ export class ToolExecutor {
         case "get_today_schedule":   return await this.getTodaySchedule(userId, conversationId);
         case "confirm_medication":   return await this.confirmMedication(request.args, userId, conversationId);
         case "correct_memory":       return await this.correctMemory(request.args, userId, conversationId);
+        case "show_photo":           return await this.showPhoto(request.args, userId, conversationId);
         default:
           return { ok: false, error: `Unknown tool: ${request.tool}` };
       }
@@ -404,6 +412,59 @@ export class ToolExecutor {
       confirmationHint: oldCount > 0
         ? `I've updated my memory about ${subject} and noted the correction.`
         : `I've saved the corrected information about ${subject}.`,
+    };
+  }
+
+  // ── show_photo ─────────────────────────────────────────────────────────────
+
+  private async showPhoto(
+    args: Record<string, unknown>,
+    userId: string,
+    conversationId: string,
+  ): Promise<ToolCallResult> {
+    const parsed = ShowPhotoArgs.safeParse(args);
+    if (!parsed.success) {
+      await this.audit({ tool: "show_photo", userId, argsRedacted: args, outcome: "validation_error", error: parsed.error.message }, conversationId);
+      return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid show_photo arguments" };
+    }
+    const { photoId } = parsed.data;
+
+    // Verify ownership — userId must match photo record
+    const [photo] = await db
+      .select()
+      .from(photos)
+      .where(and(eq(photos.userId, userId), eq(photos.id, photoId)))
+      .limit(1);
+
+    if (!photo) {
+      await this.audit({ tool: "show_photo", userId, argsRedacted: { photoId }, outcome: "execution_error", error: "Photo not found" }, conversationId);
+      return { ok: false, error: "That photo could not be found." };
+    }
+
+    let photoUrl: string;
+    try {
+      photoUrl = await objectStorageService.getObjectEntityReadURL(photo.objectKey, 3600);
+    } catch (err) {
+      logger.error({ err, photoId }, "Failed to generate signed URL for show_photo");
+      await this.audit({ tool: "show_photo", userId, argsRedacted: { photoId }, outcome: "execution_error", error: "Signed URL generation failed" }, conversationId);
+      return { ok: false, error: "Could not load the photo right now. Please try again." };
+    }
+
+    await this.audit({ tool: "show_photo", userId, argsRedacted: { photoId }, outcome: "success", entityType: "photo", entityId: photoId }, conversationId);
+
+    const title = photo.title ?? "the photo";
+    const ctxParts = [
+      photo.approxDate ? `from ${photo.approxDate}` : null,
+      photo.location ? `in ${photo.location}` : null,
+    ].filter(Boolean);
+
+    return {
+      ok: true,
+      data: { photoUrl, photoId },
+      confirmationHint:
+        `Photo displayed: ${title}${ctxParts.length ? ` (${ctxParts.join(", ")})` : ""}. ` +
+        `Invite the user to look at the screen and share their memories. ` +
+        `Do NOT name or identify anyone from appearance — wait for the user to tell you.`,
     };
   }
 

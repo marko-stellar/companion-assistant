@@ -87,6 +87,16 @@ interface DeviceContextValue {
     occurrenceId: string,
     response: OccurrenceRespondRequestResponse,
   ) => Promise<void>;
+  /**
+   * UUID of the photo currently shown on screen (sent with every conversation
+   * request so the backend can enrich context). Set by the context when the
+   * LLM calls show_photo; cleared by the UI when the overlay is dismissed.
+   */
+  activePhotoId: string | null;
+  /** Signed URL of the photo to display; null when no photo is active. */
+  pendingPhotoUrl: string | null;
+  /** Clear the photo overlay (e.g. when the user dismisses it). */
+  clearPendingPhoto: () => void;
 }
 
 const DeviceCtx = createContext<DeviceContextValue | null>(null);
@@ -143,6 +153,8 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>("idle");
   const [voiceError, setVoiceError] = useState<VoiceError | null>(null);
+  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
+  const [pendingPhotoUrl, setPendingPhotoUrl] = useState<string | null>(null);
 
   // Audio resource refs — not state, to avoid triggering re-renders
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -492,9 +504,16 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
           audio: base64,
           mimeType,
           conversationId: conversationIdRef.current ?? undefined,
+          activePhotoId: activePhotoId ?? undefined,
         });
 
         conversationIdRef.current = response.conversationId;
+
+        // When the LLM called show_photo, surface the signed URL for the overlay
+        if (response.photoUrl && response.photoId) {
+          setPendingPhotoUrl(response.photoUrl);
+          setActivePhotoId(response.photoId);
+        }
 
         // TTS failed server-side — show idle (text reply was still saved to DB)
         if (!response.audio) {
@@ -549,7 +568,12 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         recorderRef.current.stop();
       }
     }, 30_000);
-  }, [voicePhase, isOnline, ctx, clearAutoStopTimer, stopAlertAudio]);
+  }, [voicePhase, isOnline, ctx, clearAutoStopTimer, stopAlertAudio, activePhotoId]);
+
+  const clearPendingPhoto = useCallback(() => {
+    setPendingPhotoUrl(null);
+    // Keep activePhotoId so subsequent turns still have photo context
+  }, []);
 
   // ── Derived display values ────────────────────────────────────────────────
   const lang = ctx?.user?.language;
@@ -578,6 +602,9 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         onSetupComplete,
         activateConversation,
         respondToItem,
+        activePhotoId,
+        pendingPhotoUrl,
+        clearPendingPhoto,
       }}
     >
       {children}

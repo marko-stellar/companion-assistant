@@ -11,6 +11,7 @@ import {
 import { users } from "./users";
 import { conversations } from "./conversations";
 import { conversationMessages } from "./conversation_messages";
+import { photos } from "./photos";
 import { vector } from "../types/vector";
 
 /**
@@ -95,6 +96,15 @@ export const memories = pgTable(
       (): AnyPgColumn => memories.id,
       { onDelete: "set null" },
     ),
+
+    // ── Photo link ────────────────────────────────────────────────────────
+    /**
+     * When this memory was extracted during a photo conversation, links to the
+     * photo that prompted it. NULL for all non-photo memories.
+     */
+    photoId: uuid("photo_id").references(() => photos.id, {
+      onDelete: "set null",
+    }),
 
     // ── Semantic embedding ────────────────────────────────────────────────
     /** 1536-dim vector (OpenAI text-embedding-3-small). NULL when no embedding key. */

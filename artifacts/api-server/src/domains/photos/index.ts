@@ -1,21 +1,16 @@
-import { db } from "@workspace/db";
-import {
-  photos,
-  photoMemories,
-  type Photo,
-  type InsertPhoto,
-} from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { db, photos } from "@workspace/db";
+import type { Photo, InsertPhoto } from "@workspace/db";
 
 /**
- * Photos domain — handles photo metadata and photo-conversation memories.
- * Photo bytes are stored in persistent object storage via StorageProvider.
+ * Photos domain — handles photo metadata.
+ * Photo bytes are stored in persistent object storage (ObjectStorageService).
  * Bytes must never be stored in PostgreSQL or on the deployment filesystem.
  */
 export class PhotosService {
   async create(data: InsertPhoto): Promise<Photo> {
     const [photo] = await db.insert(photos).values(data).returning();
-    return photo;
+    return photo!;
   }
 
   async getForUser(userId: string): Promise<Photo[]> {
@@ -31,26 +26,31 @@ export class PhotosService {
     return photo;
   }
 
-  async addPhotoMemory(
-    photoId: string,
-    userId: string,
-    memoryContent: string,
-  ) {
-    const [memory] = await db
-      .insert(photoMemories)
-      .values({ photoId, userId, memoryContent })
+  async updateMetadata(
+    id: string,
+    data: {
+      title?: string;
+      approxDate?: string;
+      location?: string;
+      notes?: string;
+    },
+  ): Promise<Photo> {
+    const [updated] = await db
+      .update(photos)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(photos.id, id))
       .returning();
-    return memory;
+    return updated!;
   }
 
-  async getPhotoMemories(photoId: string) {
-    return db
-      .select()
-      .from(photoMemories)
-      .where(eq(photoMemories.photoId, photoId));
+  async updateVisionDescription(id: string, description: string): Promise<void> {
+    await db
+      .update(photos)
+      .set({ visionDescription: description, updatedAt: new Date() })
+      .where(eq(photos.id, id));
   }
 
-  /** Mark photo for deletion — caller must also call StorageProvider.delete() */
+  /** Mark photo for deletion — caller must also call ObjectStorageService to delete the file */
   async delete(id: string): Promise<void> {
     await db.delete(photos).where(eq(photos.id, id));
   }

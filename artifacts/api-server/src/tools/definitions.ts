@@ -190,6 +190,27 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+
+  {
+    name: "show_photo",
+    description:
+      "Display a photo on the user's tablet screen while you continue the voice conversation. " +
+      "Use this when the user asks to see a photo, when you want to prompt a memory by showing a photograph, " +
+      "or when reviewing a past event. Only use photo IDs from the AVAILABLE PHOTOS list in the system prompt. " +
+      "After showing the photo, invite the user to tell you about it — do NOT invent any details or identify people from appearance alone.",
+    parameters: {
+      type: "object",
+      required: ["photoId"],
+      additionalProperties: false,
+      properties: {
+        photoId: {
+          type: "string",
+          description:
+            "UUID of the photo to display. Must be one of the IDs listed under AVAILABLE PHOTOS in the system prompt.",
+        },
+      },
+    },
+  },
 ];
 
 /** Build the tool section injected into the system prompt. */

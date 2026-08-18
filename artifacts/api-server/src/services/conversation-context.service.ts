@@ -73,16 +73,20 @@ export class ConversationContextService {
       maxMessages = CONTEXT_WINDOW,
     } = params;
 
-    // Parallelise all independent DB queries + memory retrieval
-    const [user, todaySchedule, activeDnd, recentRows, relevantMemories] =
+    // Fetch user first so we have their timezone for schedule queries
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .then(r => r[0] ?? null);
+
+    const timezone = user?.timezone ?? "UTC";
+
+    // Parallelise remaining independent DB queries + memory retrieval
+    const [todaySchedule, activeDnd, recentRows, relevantMemories] =
       await Promise.all([
-        db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1)
-          .then(r => r[0]),
-        this.getTodaySchedule(userId),
+        this.getTodaySchedule(userId, timezone),
         db
           .select()
           .from(dndPeriods)
@@ -115,7 +119,7 @@ export class ConversationContextService {
 
     const systemPrompt = this.buildSystemPrompt({
       companion,
-      user: user ?? null,
+      user,
       language,
       todaySchedule,
       activeDnd,
@@ -205,44 +209,71 @@ export class ConversationContextService {
     return parts.join("\n");
   }
 
-  private async getTodaySchedule(userId: string): Promise<ScheduleItem[]> {
-    // Determine today's UTC bounds from the user's timezone
-    const [userRow] = await db
-      .select({ timezone: users.timezone })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+  /**
+   * Return the UTC instants that bracket the start and end of the current
+   * calendar day in the given IANA timezone.
+   *
+   * Strategy: determine how many milliseconds have elapsed since local
+   * midnight by reading the current local h/m/s via Intl, then subtract
+   * that from `now` to get local midnight in UTC.  End-of-day is
+   * local midnight + 86 400 s − 1 ms (covers DST changes: the query
+   * window may be 23 h or 25 h, but will never miss an item that belongs
+   * to the local day).
+   */
+  private localDayBoundsUtc(timezone: string): { start: Date; end: Date } {
+    const now = new Date();
+    const safeZone = this.ianaZoneOrUtc(timezone);
 
-    const timezone = userRow?.timezone ?? "UTC";
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: safeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
 
-    // Use Intl to find local midnight in the user's timezone
-    const nowUtc = new Date();
-    const localMidnightStr = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(nowUtc);
+    const parts = fmt.formatToParts(now);
+    const get = (type: string) =>
+      parseInt(parts.find(p => p.type === type)?.value ?? "0", 10);
 
-    // Parse local midnight → convert to UTC for DB query
-    const localMidnight = new Date(`${localMidnightStr}T00:00:00`);
-    const localEndOfDay = new Date(`${localMidnightStr}T23:59:59`);
+    // handle the "24:xx:xx" that some Intl implementations emit for midnight
+    const localHour = get("hour") % 24;
+    const localMin = get("minute");
+    const localSec = get("second");
 
-    // Offset between local midnight and UTC midnight
-    const tzOffset = localMidnight.getTime() - Date.UTC(
-      localMidnight.getFullYear(),
-      localMidnight.getMonth(),
-      localMidnight.getDate(),
-    );
+    const elapsedMs = (localHour * 3600 + localMin * 60 + localSec) * 1000;
+    const start = new Date(now.getTime() - elapsedMs);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-    const startOfDayUtc = new Date(
-      Date.UTC(
-        localMidnight.getFullYear(),
-        localMidnight.getMonth(),
-        localMidnight.getDate(),
-      ) - tzOffset,
-    );
-    const endOfDayUtc = new Date(startOfDayUtc.getTime() + 86399999);
+    return { start, end };
+  }
+
+  /** Format a UTC Date as HH:MM in the given IANA timezone. */
+  private formatLocalTime(date: Date, timezone: string): string {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: this.ianaZoneOrUtc(timezone),
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+  }
+
+  /** Guard against unknown/invalid timezone strings. */
+  private ianaZoneOrUtc(timezone: string): string {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: timezone });
+      return timezone;
+    } catch {
+      return "UTC";
+    }
+  }
+
+  private async getTodaySchedule(
+    userId: string,
+    timezone: string,
+  ): Promise<ScheduleItem[]> {
+    const { start: startOfDay, end: endOfDay } =
+      this.localDayBoundsUtc(timezone);
 
     const [todayReminders, todayAppointments] = await Promise.all([
       db
@@ -252,21 +283,18 @@ export class ConversationContextService {
           and(
             eq(reminders.userId, userId),
             eq(reminders.isActive, true),
-            gte(reminders.remindAtUtc, startOfDayUtc),
-            lte(reminders.remindAtUtc, endOfDayUtc),
+            gte(reminders.remindAtUtc, startOfDay),
+            lte(reminders.remindAtUtc, endOfDay),
           ),
         ),
       db
-        .select({
-          title: appointments.title,
-          startsAt: appointments.startsAtUtc,
-        })
+        .select({ title: appointments.title, startsAt: appointments.startsAtUtc })
         .from(appointments)
         .where(
           and(
             eq(appointments.userId, userId),
-            gte(appointments.startsAtUtc, startOfDayUtc),
-            lte(appointments.startsAtUtc, endOfDayUtc),
+            gte(appointments.startsAtUtc, startOfDay),
+            lte(appointments.startsAtUtc, endOfDay),
           ),
         ),
     ]);
@@ -275,22 +303,13 @@ export class ConversationContextService {
       ...todayReminders.map(r => ({
         type: "reminder" as const,
         title: r.title,
-        // Format in user's local timezone
-        time: new Intl.DateTimeFormat("sv-SE", {
-          timeZone: timezone,
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(r.remindAt),
+        time: this.formatLocalTime(r.remindAt, timezone),
         _sort: r.remindAt,
       })),
       ...todayAppointments.map(a => ({
         type: "appointment" as const,
         title: a.title,
-        time: new Intl.DateTimeFormat("sv-SE", {
-          timeZone: timezone,
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(a.startsAt),
+        time: this.formatLocalTime(a.startsAt, timezone),
         _sort: a.startsAt,
       })),
     ];

@@ -16,6 +16,7 @@ import {
   getGetDeviceStatusQueryKey,
   useGenerateDeviceCode,
   useRevokeDeviceSession,
+  type UserDetail as UserDetailData,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -54,7 +55,7 @@ const profileSchema = z.object({
 });
 type ProfileValues = z.infer<typeof profileSchema>;
 
-function ProfileTab({ user }: { user: any }) {
+function ProfileTab({ user }: { user: UserDetailData }) {
   const queryClient = useQueryClient();
   const updateMutation = useUpdateAdminUser({
     mutation: {
@@ -237,7 +238,7 @@ function ProfileTab({ user }: { user: any }) {
 // -----------------------------------------------------------------------------
 // COMPANION TAB
 // -----------------------------------------------------------------------------
-function CompanionTab({ user }: { user: any }) {
+function CompanionTab({ user }: { user: UserDetailData }) {
   const queryClient = useQueryClient();
   const { data: companions, isLoading } = useListAdminCompanions();
   

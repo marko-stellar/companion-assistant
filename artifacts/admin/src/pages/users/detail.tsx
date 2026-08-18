@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import { ArrowLeft, Check, ShieldAlert, Clock, Calendar, Image as ImageIcon, Brain, ListChecks, MessageSquare, Shield, User, Bot, Phone, Tablet, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
 import { 
@@ -793,6 +793,251 @@ function DeviceTab({ userId }: { userId: string }) {
 }
 
 // -----------------------------------------------------------------------------
+// CONVERSATIONS TAB
+// -----------------------------------------------------------------------------
+
+interface ConversationSession {
+  id: string;
+  userId: string;
+  language: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  summary: string | null;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ConversationMessageItem {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  language: string | null;
+  latencyMs: number | null;
+  providerMeta: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+function formatDuration(startedAt: string, endedAt: string | null): string {
+  if (!endedAt) return "ongoing";
+  const diffMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  const secs = Math.floor((diffMs % 60000) / 1000);
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+}
+
+function ConversationsTab({ userId }: { userId: string }) {
+  const [sessions, setSessions] = useState<ConversationSession[]>([]);
+  const [selectedSession, setSelectedSession] = useState<ConversationSession | null>(null);
+  const [messages, setMessages] = useState<ConversationMessageItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/admin/users/${userId}/conversations`, { credentials: "include" })
+      .then(r => r.json())
+      .then((data: { conversations?: ConversationSession[] }) => {
+        setSessions(data.conversations ?? []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load conversations.");
+        setLoading(false);
+      });
+  }, [userId]);
+
+  const openSession = useCallback(async (session: ConversationSession) => {
+    setSelectedSession(session);
+    setLoadingMessages(true);
+    setMessages([]);
+    try {
+      const r = await fetch(`/api/admin/conversations/${session.id}/messages`, { credentials: "include" });
+      const data: { messages?: ConversationMessageItem[] } = await r.json();
+      setMessages(data.messages ?? []);
+    } catch {
+      setMessages([]);
+    }
+    setLoadingMessages(false);
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-8 space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive/40">
+        <CardContent className="py-12 text-center text-destructive">{error}</CardContent>
+      </Card>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-6">
+            <MessageSquare className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No conversations yet</h3>
+          <p className="text-muted-foreground max-w-md">Conversations will appear here once the senior starts talking with their companion.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* Session list */}
+      <div className="space-y-2 lg:col-span-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-1 mb-3">
+          {sessions.length} session{sessions.length !== 1 ? "s" : ""}
+        </p>
+        {sessions.map(s => (
+          <button
+            key={s.id}
+            onClick={() => openSession(s)}
+            className={`w-full text-left rounded-lg border p-3 transition-colors hover:bg-muted/50 ${
+              selectedSession?.id === s.id ? "border-primary bg-primary/5" : "border-border"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-xs font-medium text-muted-foreground">{formatDate(s.startedAt)}</span>
+              {s.language && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  {s.language}
+                </span>
+              )}
+            </div>
+            <div className="text-sm font-medium leading-snug">
+              {formatTime(s.startedAt)}
+              {" · "}
+              <span className="text-muted-foreground">{formatDuration(s.startedAt, s.endedAt)}</span>
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{s.messageCount} messages</span>
+              {s.summary && <span>· has summary</span>}
+            </div>
+            {s.summary && (
+              <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2 italic">{s.summary}</p>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Transcript panel */}
+      <div className="lg:col-span-2">
+        {!selectedSession ? (
+          <Card className="border-dashed h-full min-h-[300px] flex items-center justify-center">
+            <CardContent className="text-center text-muted-foreground py-12">
+              <MessageSquare className="h-8 w-8 mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Select a session to view the transcript</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-base">
+                    {formatDate(selectedSession.startedAt)} · {formatTime(selectedSession.startedAt)}
+                  </CardTitle>
+                  <CardDescription className="mt-0.5">
+                    {formatDuration(selectedSession.startedAt, selectedSession.endedAt)}
+                    {" · "}
+                    {selectedSession.messageCount} messages
+                    {selectedSession.language && ` · ${selectedSession.language.toUpperCase()}`}
+                  </CardDescription>
+                </div>
+                <span className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary whitespace-nowrap">
+                  Read-only
+                </span>
+              </div>
+              {selectedSession.summary && (
+                <div className="mt-3 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground italic border border-border/50">
+                  <span className="font-semibold not-italic text-foreground/70 mr-1">Summary:</span>
+                  {selectedSession.summary}
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {loadingMessages ? (
+                <div className="space-y-3 py-4">
+                  <Skeleton className="h-10 w-3/4" />
+                  <Skeleton className="h-10 w-2/3 ml-auto" />
+                  <Skeleton className="h-10 w-3/4" />
+                </div>
+              ) : messages.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-8">No messages found.</p>
+              ) : (
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                  {messages.map(m => (
+                    <div
+                      key={m.id}
+                      className={`flex gap-3 ${m.role === "assistant" ? "flex-row-reverse" : "flex-row"}`}
+                    >
+                      {/* Avatar dot */}
+                      <div
+                        className={`mt-1 h-6 w-6 shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          m.role === "user"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-violet-100 text-violet-700"
+                        }`}
+                      >
+                        {m.role === "user" ? "S" : "C"}
+                      </div>
+
+                      {/* Bubble */}
+                      <div className={`max-w-[75%] ${m.role === "assistant" ? "items-end" : "items-start"} flex flex-col gap-0.5`}>
+                        <div
+                          className={`rounded-xl px-3 py-2 text-sm leading-relaxed ${
+                            m.role === "user"
+                              ? "bg-muted text-foreground rounded-tl-sm"
+                              : "bg-primary text-primary-foreground rounded-tr-sm"
+                          }`}
+                        >
+                          {m.content}
+                        </div>
+                        <div className="flex items-center gap-2 px-1">
+                          <span className="text-[10px] text-muted-foreground">{formatTime(m.createdAt)}</span>
+                          {m.language && (
+                            <span className="text-[10px] text-muted-foreground uppercase">{m.language}</span>
+                          )}
+                          {m.latencyMs != null && (
+                            <span className="text-[10px] text-muted-foreground">{m.latencyMs}ms</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
 // MAIN COMPONENT
 // -----------------------------------------------------------------------------
 
@@ -851,7 +1096,7 @@ export function UserDetail() {
     { id: "photos", label: "Photos", icon: ImageIcon, component: <PlaceholderTab title="Photo Gallery" description="Upload familiar faces and places for the companion to reference." icon={ImageIcon} /> },
     { id: "memories", label: "Memories", icon: Brain, component: <PlaceholderTab title="Memories & Context" description="Provide life context—hometown, past careers, favorite music." icon={Brain} /> },
     { id: "routines", label: "Routines", icon: ListChecks, component: <PlaceholderTab title="Daily Routines" description="Set up morning and evening rituals." icon={ListChecks} /> },
-    { id: "conversations", label: "Conversations", icon: MessageSquare, component: <PlaceholderTab title="Chat History" description="Review recent interactions with the companion." icon={MessageSquare} /> },
+    { id: "conversations", label: "Conversations", icon: MessageSquare, component: <ConversationsTab userId={user.id} /> },
     { id: "safety", label: "Safety", icon: Shield, component: <PlaceholderTab title="Safety & Alerts" description="Configure fall detection, prolonged silence, and distress word alerts." icon={Shield} /> },
     { id: "device", label: "Device", icon: Tablet, component: <DeviceTab userId={user.id} /> },
   ];

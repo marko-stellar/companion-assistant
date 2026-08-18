@@ -1,18 +1,21 @@
 /**
  * POST /api/tablet/converse
  *
- * Full voice conversation loop:
- *   1. Receive base64-encoded audio from the tablet
- *   2. Transcribe with the configured SpeechProvider
- *   3. Build message history and call LLMProvider
- *   4. Synthesize reply with the configured SpeechProvider
- *   5. Return transcript + reply text + base64 audio
+ * Full voice conversation loop with persistent context assembly:
+ *   1. Decode and transcribe audio (STT)
+ *   2. Get or create a conversation session
+ *   3. Build a bounded context window via ConversationContextService
+ *   4. Generate a reply via LLMProvider
+ *   5. Synthesize audio via SpeechProvider (TTS)
+ *   6. Persist both messages with metadata (latency, language, model)
+ *   7. Increment conversation message_count; fire-and-forget summary check
  *
- * All provider keys stay server-side. No credentials reach the browser.
+ * Privacy: transcript content is NEVER written to server logs.
+ * Only metadata (lengths, latencies, language) is logged.
  */
 
 import { Router } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   db,
   users,
@@ -21,41 +24,18 @@ import {
   conversationMessages,
 } from "@workspace/db";
 import { requireDevice } from "../../middlewares/requireDevice";
-import { speechProvider, llmProvider, COMPANION_VOICE_IDS } from "../../providers/registry";
-import type { Message } from "../../providers/llm.provider";
+import {
+  speechProvider,
+  llmProvider,
+  COMPANION_VOICE_IDS,
+} from "../../providers/registry";
+import { conversationContextService } from "../../services/conversation-context.service";
+import { conversationSummaryService } from "../../services/conversation-summary.service";
 
 const router = Router();
 
-// ── System prompt builder ───────────────────────────────────────────────────
-
-function buildSystemPrompt(
-  companion: {
-    name: string;
-    personalityConfig: { systemPromptText: string; languageStyle: string };
-  },
-  language: string,
-): string {
-  const langInstruction =
-    language === "hr"
-      ? "Govori isključivo na standardnom hrvatskom jeziku. Koristi latinično pismo. Izbjegavaj srbizme i bosanske varijante gdje je moguće. Ne prevodi vlastita imena."
-      : "Speak in English.";
-
-  return [
-    companion.personalityConfig.systemPromptText,
-    "",
-    langInstruction,
-    "",
-    "IMPORTANT RULES:",
-    "- You are talking to an older person (65–75 years old). Be warm, patient and clear.",
-    "- Keep replies to 1–3 sentences. Never ramble.",
-    "- Never claim to be human. You may describe yourself as their companion or digital friend.",
-    "- Never give medical advice or diagnoses. If the user raises a health concern, gently suggest speaking with a doctor.",
-  ].join("\n");
-}
-
-// ── Route ───────────────────────────────────────────────────────────────────
-
 router.post("/converse", requireDevice, async (req, res): Promise<void> => {
+  const routeStart = Date.now();
   const userId = req.deviceUserId!;
 
   const {
@@ -91,7 +71,7 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
   const { user, companion } = row;
   const language = user.language ?? "en";
 
-  // ── 2. Decode audio buffer ────────────────────────────────────────────────
+  // ── 2. Decode audio ───────────────────────────────────────────────────────
   let audioBuffer: Buffer;
   try {
     audioBuffer = Buffer.from(audio, "base64");
@@ -100,7 +80,8 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     return;
   }
 
-  // ── 3. Transcribe ─────────────────────────────────────────────────────────
+  // ── 3. Transcribe (STT) ───────────────────────────────────────────────────
+  const sttStart = Date.now();
   let transcript: string;
   let detectedLanguage: string | undefined;
 
@@ -118,83 +99,70 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     return;
   }
 
+  const sttLatencyMs = Date.now() - sttStart;
+
   if (!transcript) {
     res.status(422).json({ error: "transcription_empty" });
     return;
   }
+
+  const effectiveLang = detectedLanguage ?? language;
 
   // ── 4. Get or create conversation session ─────────────────────────────────
   let convId = existingConvId;
   if (!convId) {
     const [conv] = await db
       .insert(conversations)
-      .values({ userId })
+      .values({ userId, language: effectiveLang })
       .returning({ id: conversations.id });
     convId = conv.id;
   }
 
-  // ── 5. Load recent history for context (last 6 messages = 3 turns) ────────
-  const recentRows = await db
-    .select({
-      role: conversationMessages.role,
-      content: conversationMessages.content,
-    })
-    .from(conversationMessages)
-    .where(eq(conversationMessages.conversationId, convId))
-    .orderBy(desc(conversationMessages.createdAt))
-    .limit(6);
+  // ── 5. Build bounded context window ──────────────────────────────────────
+  const { systemPrompt, recentMessages } =
+    await conversationContextService.buildContext({
+      userId,
+      companion,
+      conversationId: convId,
+      language: effectiveLang,
+    });
 
-  const historyMessages: Message[] = recentRows
-    .reverse()
-    .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-
-  // ── 6. Build LLM message list ─────────────────────────────────────────────
-  const fallbackCompanion = {
-    name: "Companion",
-    personalityConfig: {
-      systemPromptText:
-        "You are a caring and friendly companion to an elderly person.",
-      languageStyle: "warm and gentle",
-    },
-  };
-
-  const llmMessages: Message[] = [
-    {
-      role: "system",
-      content: buildSystemPrompt(companion ?? fallbackCompanion, language),
-    },
-    ...historyMessages,
-    { role: "user", content: transcript },
+  const llmMessages = [
+    { role: "system" as const, content: systemPrompt },
+    ...recentMessages,
+    { role: "user" as const, content: transcript },
   ];
 
-  // ── 7. Generate reply ─────────────────────────────────────────────────────
+  // ── 6. Generate LLM reply ─────────────────────────────────────────────────
+  const llmStart = Date.now();
   let reply: string;
+  let tokenUsage: { promptTokens: number; completionTokens: number } | undefined;
+
   try {
     const result = await llmProvider.respond({
       messages: llmMessages,
-      language,
+      language: effectiveLang,
       maxTokens: 150,
     });
     reply = result.content.trim();
+    tokenUsage = result.usage;
   } catch (err) {
     req.log.error({ err }, "LLM failed");
-    res.status(500).json({ error: "Response generation failed. Please try again." });
+    res.status(500).json({
+      error: "Response generation failed. Please try again.",
+    });
     return;
   }
 
-  // ── 8. Persist conversation messages ─────────────────────────────────────
-  await db.insert(conversationMessages).values([
-    { conversationId: convId, role: "user" as const, content: transcript },
-    { conversationId: convId, role: "assistant" as const, content: reply },
-  ]);
+  const llmLatencyMs = Date.now() - llmStart;
 
-  // ── 9. Synthesize speech ──────────────────────────────────────────────────
+  // ── 7. Synthesize speech (TTS) ────────────────────────────────────────────
   const voiceId = companion
-    ? (COMPANION_VOICE_IDS[companion.name] ?? companion.personalityConfig.voiceId)
+    ? (COMPANION_VOICE_IDS[companion.name] ??
+       companion.personalityConfig.voiceId)
     : "21m00Tcm4TlvDq8ikWAM";
 
-  const effectiveLang = detectedLanguage ?? language;
-
+  const ttsStart = Date.now();
   let replyAudioBuffer: Buffer = Buffer.alloc(0);
   let replyMimeType = "audio/mpeg";
 
@@ -203,17 +171,80 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
       text: reply,
       voiceId,
       language: effectiveLang,
-      speed: 0.9, // Slightly slower for senior-friendly delivery
+      speed: 0.9,
     });
     replyAudioBuffer = synthesized.audioBuffer;
     replyMimeType = synthesized.mimeType;
   } catch (err) {
-    // TTS failure is non-fatal — return text reply without audio
-    req.log.error({ err }, "TTS failed; returning text-only response");
+    // TTS failure is non-fatal — conversation is saved, audio is empty
+    req.log.error({ err }, "TTS failed — returning text-only response");
   }
 
+  const ttsLatencyMs = Date.now() - ttsStart;
+  const totalLatencyMs = Date.now() - routeStart;
+
+  // ── 8. Persist messages with metadata ─────────────────────────────────────
+  // Privacy: content is stored in the DB but NEVER written to log output.
+  const sttModel = process.env.ELEVENLABS_STT_MODEL ?? "scribe_v1";
+  const ttsModel = process.env.ELEVENLABS_TTS_MODEL ?? "eleven_multilingual_v2";
+
+  await db.insert(conversationMessages).values([
+    {
+      conversationId: convId,
+      role: "user" as const,
+      content: transcript,
+      language: effectiveLang,
+      latencyMs: sttLatencyMs,
+      providerMeta: { sttModel, sttLatencyMs },
+    },
+    {
+      conversationId: convId,
+      role: "assistant" as const,
+      content: reply,
+      language: effectiveLang,
+      latencyMs: totalLatencyMs,
+      providerMeta: {
+        sttModel,
+        ttsModel,
+        voiceId,
+        sttLatencyMs,
+        llmLatencyMs,
+        ttsLatencyMs,
+        ...(tokenUsage ? { tokens: tokenUsage } : {}),
+      },
+    },
+  ]);
+
+  // ── 9. Increment message count; fire-and-forget summary ───────────────────
+  const [updated] = await db
+    .update(conversations)
+    .set({
+      messageCount: sql`${conversations.messageCount} + 2`,
+      updatedAt: new Date(),
+    })
+    .where(eq(conversations.id, convId))
+    .returning({ messageCount: conversations.messageCount });
+
+  // Fire-and-forget: errors are logged inside the service, never propagated
+  void conversationSummaryService.maybeSummarize(
+    convId,
+    updated?.messageCount ?? 0,
+  );
+
+  // ── 10. Privacy-safe log ──────────────────────────────────────────────────
   req.log.info(
-    { userId, convId, lang: effectiveLang, transcriptLen: transcript.length },
+    {
+      userId,
+      convId,
+      lang: effectiveLang,
+      sttLatencyMs,
+      llmLatencyMs,
+      ttsLatencyMs,
+      totalLatencyMs,
+      // Lengths only — never log transcript content
+      transcriptLen: transcript.length,
+      replyLen: reply.length,
+    },
     "Conversation turn complete",
   );
 

@@ -22,6 +22,13 @@
       "when": 1787037927611,
       "tag": "20260818072527_goofy_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787040820571,
+      "tag": "20260818081340_magenta_freak",
+      "breakpoints": true
     }
   ]
 }

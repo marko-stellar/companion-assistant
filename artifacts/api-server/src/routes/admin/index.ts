@@ -3,6 +3,7 @@ import authRouter from "./auth";
 import usersRouter from "./users";
 import companionsRouter from "./companions";
 import deviceRouter from "./device";
+import conversationsRouter from "./conversations";
 
 /**
  * Admin API route group — /api/admin/*
@@ -20,5 +21,6 @@ router.use(authRouter);
 router.use(companionsRouter); // also handles /dashboard
 router.use(usersRouter);
 router.use(deviceRouter);
+router.use(conversationsRouter);
 
 export default router;

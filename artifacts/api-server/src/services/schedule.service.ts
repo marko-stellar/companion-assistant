@@ -133,9 +133,11 @@ export class ScheduleService {
   }
 
   /**
-   * Appointments currently within their configured reminder window.
-   * Looks across day boundaries (up to 24 h ahead) so a 23:50 check can
-   * surface a 00:15 appointment with a 30-minute reminder.
+   * Reminder-alert candidates: upcoming appointments (next 24 h, crossing
+   * day boundaries) that have a reminder configured — INCLUDING those whose
+   * window hasn't opened yet. Clients evaluate the window locally on a fast
+   * timer (see isInAlertWindow), so short windows that open and close
+   * between fetches are still caught.
    */
   async getUpcomingAlerts(userId: string): Promise<AppointmentAlertItem[]> {
     const now = new Date();
@@ -155,13 +157,11 @@ export class ScheduleService {
       );
 
     return rows
-      .filter((appt) => {
-        // Skip appointments with no reminder configured
-        if (appt.reminderMinutesBefore == null) return false;
-        const minutesUntil =
-          (appt.startsAtUtc.getTime() - now.getTime()) / 60_000;
-        return minutesUntil <= appt.reminderMinutesBefore;
-      })
+      // Skip appointments with no reminder configured. Appointments whose
+      // reminder window hasn't opened yet are INCLUDED — clients re-evaluate
+      // the window locally on a fast timer, so a short reminder window that
+      // opens and closes between fetches is still caught and spoken/shown.
+      .filter((appt) => appt.reminderMinutesBefore != null)
       .map((appt) => ({
         id: appt.id,
         title: appt.title,

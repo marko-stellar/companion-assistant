@@ -71,3 +71,4 @@ Each maps to a senior-friendly localized string. Banner shown below Talk button,
 
 - LLM: `MockLLMProvider` with hardcoded round-robin responses. Replace when OPENAI_API_KEY or ANTHROPIC_API_KEY is available — the `LLMProvider` interface is already wired.
 - ConversationService conversation context: history loaded from DB for real LLM, but mock ignores it.
+

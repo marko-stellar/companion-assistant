@@ -561,7 +561,7 @@ export const CreateAdminAppointmentBody = zod.object({
   "location": zod.string().nullish(),
   "startsAtUtc": zod.string().describe('ISO timestamp (UTC)'),
   "endsAtUtc": zod.string().nullish(),
-  "reminderMinutesBefore": zod.number().optional()
+  "reminderMinutesBefore": zod.number().nullish().describe('null = no pre-alert')
 })
 
 export const CreateAdminAppointmentResponse = zod.object({
@@ -618,7 +618,7 @@ export const UpdateAdminAppointmentBody = zod.object({
   "location": zod.string().nullish(),
   "startsAtUtc": zod.string().optional(),
   "endsAtUtc": zod.string().nullish(),
-  "reminderMinutesBefore": zod.number().optional(),
+  "reminderMinutesBefore": zod.number().nullish().describe('null = clear the pre-alert'),
   "isActive": zod.boolean().optional()
 })
 
@@ -728,8 +728,16 @@ export const GetTabletTodayResponse = zod.object({
   "title": zod.string(),
   "time": zod.string().describe('Local HH:MM'),
   "done": zod.boolean(),
-  "occurrenceId": zod.string().optional().describe('Reminder occurrence ID (present for reminder\/medication items)')
-}))
+  "occurrenceId": zod.string().optional().describe('Reminder occurrence ID (present for reminder\/medication items)'),
+  "reminderMinutesBefore": zod.number().optional().describe('Minutes before start to surface a pre-alert (appointments only)'),
+  "startsAtUtc": zod.string().optional().describe('ISO UTC timestamp of appointment start (appointments only)')
+})),
+  "upcomingAlerts": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "startsAtUtc": zod.string().describe('ISO UTC timestamp of the appointment start'),
+  "reminderMinutesBefore": zod.number().describe('The configured reminder window (minutes)')
+})).describe('Appointments currently within their reminder window (may span day boundary)')
 })
 
 

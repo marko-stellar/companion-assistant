@@ -125,3 +125,38 @@ export async function converse(req: ConverseRequest): Promise<ConverseResponse> 
 
   return res.json() as Promise<ConverseResponse>;
 }
+
+// ── Proactive speech (spoken reminders) ─────────────────────────────────────
+
+export interface SpeakResponse {
+  /** Base64-encoded audio of the synthesized text. */
+  audio: string;
+  /** MIME type of the audio, e.g. "audio/mpeg". */
+  mimeType: string;
+}
+
+/**
+ * Synthesize short text with the companion's voice (no STT/LLM round-trip).
+ * Used for proactive spoken alerts such as appointment reminders.
+ * Throws on network errors or non-2xx responses.
+ */
+export async function synthesizeSpeech(text: string): Promise<SpeakResponse> {
+  const token = getStoredToken();
+  const res = await fetch("/api/tablet/speak", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(
+      typeof data.error === "string" ? data.error : "Speech request failed",
+    );
+  }
+
+  return res.json() as Promise<SpeakResponse>;
+}

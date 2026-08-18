@@ -443,6 +443,15 @@ export interface TodayItem {
   startsAtUtc?: string;
 }
 
+export interface AppointmentAlert {
+  id: string;
+  title: string;
+  /** ISO UTC timestamp of the appointment start */
+  startsAtUtc: string;
+  /** The configured reminder window (minutes) */
+  reminderMinutesBefore: number;
+}
+
 export type OccurrenceRespondRequestResponse = typeof OccurrenceRespondRequestResponse[keyof typeof OccurrenceRespondRequestResponse];
 
 
@@ -454,15 +463,6 @@ export const OccurrenceRespondRequestResponse = {
 
 export interface OccurrenceRespondRequest {
   response: OccurrenceRespondRequestResponse;
-}
-
-export interface AppointmentAlert {
-  id: string;
-  title: string;
-  /** ISO UTC timestamp of the appointment start */
-  startsAtUtc: string;
-  /** The configured reminder window (minutes) */
-  reminderMinutesBefore: number;
 }
 
 export interface OkResponse {

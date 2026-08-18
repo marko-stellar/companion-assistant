@@ -21,9 +21,11 @@ import {
   fetchTodayItems,
   respondOccurrence,
   converse,
+  synthesizeSpeech,
 } from "@/lib/device-api";
 import type { OccurrenceRespondRequestResponse } from "@workspace/api-client-react";
 import { getStrings, getGreeting, type Strings } from "@/lib/i18n";
+import { SpokenAlertController } from "@/lib/spoken-alerts";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -270,6 +272,85 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     };
   }, [appState, refreshTodayItems]);
 
+  // ── Spoken appointment reminders ──────────────────────────────────────────
+  // When an appointment enters its reminder window, speak the alert once via
+  // TTS. DND suppresses the spoken alert (the visual banner still shows).
+  // Spoken IDs are tracked in a ref so an alert never repeats this session.
+  const alertAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Live mirrors of state the async alert task must re-check after awaits.
+  const voicePhaseRef = useRef(voicePhase);
+  voicePhaseRef.current = voicePhase;
+  const isOnlineRef = useRef(isOnline);
+  isOnlineRef.current = isOnline;
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
+
+  // Controller owns spoken-ID tracking, in-flight guard, and cancellation
+  // (see SpokenAlertController for the retry/once-per-session guarantees).
+  const spokenAlertsRef = useRef<SpokenAlertController | null>(null);
+  if (!spokenAlertsRef.current) {
+    spokenAlertsRef.current = new SpokenAlertController({
+      canSpeakNow: () =>
+        isOnlineRef.current &&
+        !isDndActive(ctxRef.current?.dnd) &&
+        voicePhaseRef.current === "idle",
+      buildText: (alert) => {
+        const strings = getStrings(ctxRef.current?.user?.language);
+        return `${alert.title} ${strings.reminderSoon} ${alert.minutesUntil} ${strings.reminderMinutes}`;
+      },
+      synthesize: (text) => synthesizeSpeech(text),
+      play: (audio, mimeType, onStarted) =>
+        new Promise<void>((resolve) => {
+          const player = new Audio(`data:${mimeType};base64,${audio}`);
+          alertAudioRef.current = player;
+          const settle = () => {
+            if (alertAudioRef.current === player) alertAudioRef.current = null;
+            resolve();
+          };
+          player.onended = settle;
+          player.onerror = settle;
+          // pause() (barge-in / eligibility loss / cleanup) must also settle
+          // the Promise so the controller's in-flight guard is released.
+          player.onpause = settle;
+          player.play().then(onStarted).catch(settle); // autoplay may be blocked
+        }),
+    });
+  }
+
+  /** Stop any in-progress spoken alert and invalidate in-flight synthesis. */
+  const stopAlertAudio = useCallback(() => {
+    spokenAlertsRef.current?.cancel();
+    const player = alertAudioRef.current;
+    if (player) {
+      alertAudioRef.current = null;
+      player.pause(); // fires "pause" → settles the playback Promise
+    }
+  }, []);
+
+  // Stop active alert audio the moment eligibility is lost (DND begins,
+  // tablet goes offline, or a conversation starts).
+  useEffect(() => {
+    if (!isOnline || isDndActive(ctx?.dnd) || voicePhase !== "idle") {
+      stopAlertAudio();
+    }
+  }, [isOnline, ctx, voicePhase, stopAlertAudio]);
+
+  useEffect(() => {
+    if (appState !== "home") return;
+
+    const checkAndSpeak = () => {
+      void spokenAlertsRef.current?.tick(upcomingAlerts, new Date());
+    };
+
+    checkAndSpeak();
+    const intervalId = setInterval(checkAndSpeak, 30_000);
+    return () => {
+      clearInterval(intervalId);
+      stopAlertAudio();
+    };
+  }, [appState, upcomingAlerts, stopAlertAudio]);
+
   // ── Callbacks ─────────────────────────────────────────────────────────────
 
   const clearVoiceError = useCallback(() => setVoiceError(null), []);
@@ -330,7 +411,8 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
     // Guard: no conversation while offline or DND
     if (!isOnline || isDndActive(ctx?.dnd)) return;
 
-    // ── Barge-in: stop current playback ──────────────────────────────────
+    // ── Barge-in: stop current playback (including a spoken alert) ───────
+    stopAlertAudio();
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
       audioPlayerRef.current.src = "";
@@ -467,7 +549,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
         recorderRef.current.stop();
       }
     }, 30_000);
-  }, [voicePhase, isOnline, ctx, clearAutoStopTimer]);
+  }, [voicePhase, isOnline, ctx, clearAutoStopTimer, stopAlertAudio]);
 
   // ── Derived display values ────────────────────────────────────────────────
   const lang = ctx?.user?.language;

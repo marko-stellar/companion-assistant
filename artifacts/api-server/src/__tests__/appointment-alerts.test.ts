@@ -72,4 +72,26 @@ describe("isInAlertWindow", () => {
     const midnight = new Date("2025-01-16T00:00:00Z").getTime();
     expect(isInAlertWindow(midnight, 30, afterMidnight)).toBe(false);
   });
+
+  // ── Short lead-time windows (spoken-reminder discovery) ──────────────────
+  // The server returns alert CANDIDATES before their window opens; clients
+  // re-evaluate on a fast timer. These prove a short window (e.g. 2 minutes)
+  // that opens between server fetches is still caught locally.
+
+  it("short window: not alerted before the window opens, alerted once inside it", () => {
+    const now = Date.now();
+    const startsAt = now + 4 * MINS; // appointment in 4 min, 2-min reminder
+    expect(isInAlertWindow(startsAt, 2, now)).toBe(false);          // too early
+    expect(isInAlertWindow(startsAt, 2, now + 2 * MINS)).toBe(true); // boundary (2 min left)
+    expect(isInAlertWindow(startsAt, 2, now + 3 * MINS)).toBe(true); // inside (1 min left)
+    expect(isInAlertWindow(startsAt, 2, now + 4 * MINS)).toBe(false); // started
+  });
+
+  it("1-minute window is catchable by a sub-minute local timer", () => {
+    const now = Date.now();
+    const startsAt = now + 1 * MINS;
+    expect(isInAlertWindow(startsAt, 1, now)).toBe(true);           // window just opened
+    expect(isInAlertWindow(startsAt, 1, now + 30_000)).toBe(true);  // 30 s left
+    expect(isInAlertWindow(startsAt, 1, now + 60_000)).toBe(false); // started
+  });
 });

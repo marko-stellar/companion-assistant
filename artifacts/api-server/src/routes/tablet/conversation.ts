@@ -270,4 +270,66 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
   });
 });
 
+/**
+ * POST /api/tablet/speak
+ *
+ * Synthesize arbitrary short text (e.g. an appointment reminder) with the
+ * user's companion voice. No STT / LLM / persistence — pure TTS passthrough
+ * so the tablet can proactively speak alerts.
+ */
+router.post("/speak", requireDevice, async (req, res): Promise<void> => {
+  const userId = req.deviceUserId!;
+  const { text } = req.body as { text?: string };
+
+  if (!text || typeof text !== "string" || !text.trim()) {
+    res.status(400).json({ error: "text (string) is required" });
+    return;
+  }
+  if (text.length > 300) {
+    res.status(400).json({ error: "text must be 300 characters or fewer" });
+    return;
+  }
+
+  const [row] = await db
+    .select({ user: users, companion: companions })
+    .from(users)
+    .leftJoin(companions, eq(users.companionId, companions.id))
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!row) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const { user, companion } = row;
+  const language = user.language ?? "en";
+
+  const voiceId = companion
+    ? (COMPANION_VOICE_IDS[companion.name] ??
+       companion.personalityConfig.voiceId)
+    : "21m00Tcm4TlvDq8ikWAM";
+
+  const ttsStart = Date.now();
+  try {
+    const synthesized = await speechProvider.synthesize({
+      text: text.trim(),
+      voiceId,
+      language,
+      speed: 0.9,
+    });
+    req.log.info(
+      { userId, textLen: text.length, ttsLatencyMs: Date.now() - ttsStart },
+      "Proactive speech synthesized",
+    );
+    res.json({
+      audio: synthesized.audioBuffer.toString("base64"),
+      mimeType: synthesized.mimeType,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Proactive TTS failed");
+    res.status(500).json({ error: "Speech synthesis failed" });
+  }
+});
+
 export default router;

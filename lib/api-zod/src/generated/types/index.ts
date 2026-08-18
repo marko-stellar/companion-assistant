@@ -7,9 +7,9 @@
  */
 
 export * from './adminLoginInput';
-export * from './appointmentAlert';
 export * from './adminUser';
 export * from './appointment';
+export * from './appointmentAlert';
 export * from './appointmentCreateRequest';
 export * from './appointmentResponse';
 export * from './appointmentsResponse';

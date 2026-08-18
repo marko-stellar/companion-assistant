@@ -10,25 +10,14 @@ import {
 import {
   CreateAdminUserBody,
   UpdateAdminUserBody,
-  GetAdminUserParams,
-  UpdateAdminUserParams,
   ListAdminUsersQueryParams,
-  GetEmergencyContactParams,
   UpsertEmergencyContactBody,
-  UpsertEmergencyContactParams,
-  GetDndPeriodParams,
   UpsertDndPeriodBody,
-  UpsertDndPeriodParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../../middlewares/requireAdmin";
+import { requireUuidParam } from "../../middlewares/validateParam";
 
 const router = Router();
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function parseId(raw: string | string[]): string {
-  return Array.isArray(raw) ? raw[0] : raw;
-}
 
 // ── User list ────────────────────────────────────────────────────────────────
 
@@ -113,94 +102,91 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
 // ── User detail ───────────────────────────────────────────────────────────────
 
 /** GET /admin/users/:id */
-router.get("/users/:id", requireAdmin, async (req, res): Promise<void> => {
-  const params = GetAdminUserParams.safeParse({ id: parseId(req.params.id) });
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+router.get(
+  "/users/:id",
+  requireUuidParam("id"),
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const id = String(req.params.id);
 
-  const detail = await getUserDetail(params.data.id);
-  if (!detail) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
+    const detail = await getUserDetail(id);
+    if (!detail) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
 
-  res.json(detail);
-});
+    res.json(detail);
+  },
+);
 
 // ── User update ───────────────────────────────────────────────────────────────
 
 /** PATCH /admin/users/:id */
-router.patch("/users/:id", requireAdmin, async (req, res): Promise<void> => {
-  const params = UpdateAdminUserParams.safeParse({ id: parseId(req.params.id) });
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+router.patch(
+  "/users/:id",
+  requireUuidParam("id"),
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const id = String(req.params.id);
 
-  const parsed = UpdateAdminUserBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const data = parsed.data;
-  const updates: Partial<typeof users.$inferInsert> = {
-    ...data,
-    updatedAt: new Date(),
-  };
-
-  // Keep displayName in sync
-  if (data.firstName !== undefined || data.lastName !== undefined) {
-    const [current] = await db
-      .select({ firstName: users.firstName, lastName: users.lastName })
-      .from(users)
-      .where(eq(users.id, params.data.id));
-    if (current) {
-      const fn = data.firstName ?? current.firstName ?? "";
-      const ln = data.lastName ?? current.lastName ?? "";
-      updates.displayName = `${fn} ${ln}`.trim();
+    const parsed = UpdateAdminUserBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
     }
-  }
 
-  const [updated] = await db
-    .update(users)
-    .set(updates)
-    .where(eq(users.id, params.data.id))
-    .returning({ id: users.id });
+    const data = parsed.data;
+    const updates: Partial<typeof users.$inferInsert> = {
+      ...data,
+      updatedAt: new Date(),
+    };
 
-  if (!updated) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
+    // Keep displayName in sync
+    if (data.firstName !== undefined || data.lastName !== undefined) {
+      const [current] = await db
+        .select({ firstName: users.firstName, lastName: users.lastName })
+        .from(users)
+        .where(eq(users.id, id));
+      if (current) {
+        const fn = data.firstName ?? current.firstName ?? "";
+        const ln = data.lastName ?? current.lastName ?? "";
+        updates.displayName = `${fn} ${ln}`.trim();
+      }
+    }
 
-  const detail = await getUserDetail(params.data.id);
-  req.log.info({ userId: params.data.id }, "User updated");
-  res.json(detail);
-});
+    const [updated] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const detail = await getUserDetail(id);
+    req.log.info({ userId: id }, "User updated");
+    res.json(detail);
+  },
+);
 
 // ── Emergency contact ─────────────────────────────────────────────────────────
 
 /** GET /admin/users/:id/emergency-contact */
 router.get(
   "/users/:id/emergency-contact",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
-    const params = GetEmergencyContactParams.safeParse({
-      id: parseId(req.params.id),
-    });
-    if (!params.success) {
-      res.status(400).json({ error: params.error.message });
-      return;
-    }
+    const id = String(req.params.id);
 
     const [ec] = await db
       .select()
       .from(emergencyContacts)
       .where(
         and(
-          eq(emergencyContacts.userId, params.data.id),
+          eq(emergencyContacts.userId, id),
           eq(emergencyContacts.isPrimary, true),
         ),
       );
@@ -217,15 +203,10 @@ router.get(
 /** PUT /admin/users/:id/emergency-contact */
 router.put(
   "/users/:id/emergency-contact",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
-    const params = UpsertEmergencyContactParams.safeParse({
-      id: parseId(req.params.id),
-    });
-    if (!params.success) {
-      res.status(400).json({ error: params.error.message });
-      return;
-    }
+    const id = String(req.params.id);
 
     const parsed = UpsertEmergencyContactBody.safeParse(req.body);
     if (!parsed.success) {
@@ -233,7 +214,6 @@ router.put(
       return;
     }
 
-    const userId = params.data.id;
     const data = parsed.data;
 
     // Normalize phone: strip spaces, allow +, digits, dashes, parens
@@ -245,7 +225,7 @@ router.put(
         .delete(emergencyContacts)
         .where(
           and(
-            eq(emergencyContacts.userId, userId),
+            eq(emergencyContacts.userId, id),
             eq(emergencyContacts.isPrimary, true),
           ),
         );
@@ -253,7 +233,7 @@ router.put(
       const [inserted] = await tx
         .insert(emergencyContacts)
         .values({
-          userId,
+          userId: id,
           name: data.name,
           phone,
           relationship: data.relationship,
@@ -265,7 +245,7 @@ router.put(
       return inserted;
     });
 
-    req.log.info({ userId }, "Emergency contact upserted");
+    req.log.info({ userId: id }, "Emergency contact upserted");
     res.json(ec);
   },
 );
@@ -275,18 +255,15 @@ router.put(
 /** GET /admin/users/:id/dnd */
 router.get(
   "/users/:id/dnd",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
-    const params = GetDndPeriodParams.safeParse({ id: parseId(req.params.id) });
-    if (!params.success) {
-      res.status(400).json({ error: params.error.message });
-      return;
-    }
+    const id = String(req.params.id);
 
     const [dnd] = await db
       .select()
       .from(dndPeriods)
-      .where(eq(dndPeriods.userId, params.data.id));
+      .where(eq(dndPeriods.userId, id));
 
     if (!dnd) {
       res.status(404).json({ error: "No DND period configured" });
@@ -300,15 +277,10 @@ router.get(
 /** PUT /admin/users/:id/dnd */
 router.put(
   "/users/:id/dnd",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
-    const params = UpsertDndPeriodParams.safeParse({
-      id: parseId(req.params.id),
-    });
-    if (!params.success) {
-      res.status(400).json({ error: params.error.message });
-      return;
-    }
+    const id = String(req.params.id);
 
     const parsed = UpsertDndPeriodBody.safeParse(req.body);
     if (!parsed.success) {
@@ -316,17 +288,16 @@ router.put(
       return;
     }
 
-    const userId = params.data.id;
     const data = parsed.data;
 
     const dnd = await db.transaction(async (tx) => {
       // One DND period per user for MVP — replace any existing
-      await tx.delete(dndPeriods).where(eq(dndPeriods.userId, userId));
+      await tx.delete(dndPeriods).where(eq(dndPeriods.userId, id));
 
       const [inserted] = await tx
         .insert(dndPeriods)
         .values({
-          userId,
+          userId: id,
           label: data.label,
           startTime: data.startTime,
           endTime: data.endTime,
@@ -338,7 +309,7 @@ router.put(
       return inserted;
     });
 
-    req.log.info({ userId }, "DND period upserted");
+    req.log.info({ userId: id }, "DND period upserted");
     res.json(dnd);
   },
 );

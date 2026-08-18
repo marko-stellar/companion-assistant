@@ -3,6 +3,7 @@ import { Router } from "express";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { db, deviceSetupCodes, deviceSessions, users } from "@workspace/db";
 import { requireAdmin } from "../../middlewares/requireAdmin";
+import { requireUuidParam } from "../../middlewares/validateParam";
 
 const router = Router();
 
@@ -21,6 +22,7 @@ function generateCode(): string {
 // GET /admin/users/:id/device-status
 router.get(
   "/users/:id/device-status",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
     const id = String(req.params.id);
@@ -57,6 +59,7 @@ router.get(
 // POST /admin/users/:id/device-code
 router.post(
   "/users/:id/device-code",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
     const id = String(req.params.id);
@@ -92,6 +95,7 @@ router.post(
 // DELETE /admin/users/:id/device-session
 router.delete(
   "/users/:id/device-session",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
     const id = String(req.params.id);

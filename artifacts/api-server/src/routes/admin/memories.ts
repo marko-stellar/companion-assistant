@@ -13,17 +13,18 @@
  */
 
 import { Router } from "express";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db, users, memories } from "@workspace/db";
 import { MEMORY_TYPES } from "@workspace/db";
 import { requireAdmin } from "../../middlewares/requireAdmin";
+import { requireUuidParam } from "../../middlewares/validateParam";
 
 const router = Router();
 
 // ── List memories for a user ──────────────────────────────────────────────
 
-router.get("/users/:id/memories", requireAdmin, async (req, res): Promise<void> => {
-  const userId = req.params.id as string;
+router.get("/users/:id/memories", requireUuidParam("id"), requireAdmin, async (req, res): Promise<void> => {
+  const userId = String(req.params.id);
   const typeFilter = req.query.type as string | undefined;
   const activeFilter = req.query.active as string | undefined; // "true" | "false" | "all"
 
@@ -56,8 +57,8 @@ router.get("/users/:id/memories", requireAdmin, async (req, res): Promise<void> 
 
 // ── Single memory with superseded chain ───────────────────────────────────
 
-router.get("/memories/:id", requireAdmin, async (req, res): Promise<void> => {
-  const memId = req.params.id as string;
+router.get("/memories/:id", requireUuidParam("id"), requireAdmin, async (req, res): Promise<void> => {
+  const memId = String(req.params.id);
 
   const [mem] = await db.select().from(memories).where(eq(memories.id, memId)).limit(1);
   if (!mem) { res.status(404).json({ error: "Memory not found" }); return; }
@@ -79,8 +80,8 @@ router.get("/memories/:id", requireAdmin, async (req, res): Promise<void> => {
 
 // ── Edit a memory ─────────────────────────────────────────────────────────
 
-router.patch("/memories/:id", requireAdmin, async (req, res): Promise<void> => {
-  const memId = req.params.id as string;
+router.patch("/memories/:id", requireUuidParam("id"), requireAdmin, async (req, res): Promise<void> => {
+  const memId = String(req.params.id);
 
   const [existing] = await db.select({ id: memories.id }).from(memories).where(eq(memories.id, memId)).limit(1);
   if (!existing) { res.status(404).json({ error: "Memory not found" }); return; }
@@ -137,8 +138,8 @@ router.patch("/memories/:id", requireAdmin, async (req, res): Promise<void> => {
 
 // ── Deactivate (soft-delete) ──────────────────────────────────────────────
 
-router.post("/memories/:id/deactivate", requireAdmin, async (req, res): Promise<void> => {
-  const memId = req.params.id as string;
+router.post("/memories/:id/deactivate", requireUuidParam("id"), requireAdmin, async (req, res): Promise<void> => {
+  const memId = String(req.params.id);
 
   const [mem] = await db.select({ id: memories.id }).from(memories).where(eq(memories.id, memId)).limit(1);
   if (!mem) { res.status(404).json({ error: "Memory not found" }); return; }
@@ -149,8 +150,8 @@ router.post("/memories/:id/deactivate", requireAdmin, async (req, res): Promise<
 
 // ── Reactivate ────────────────────────────────────────────────────────────
 
-router.post("/memories/:id/reactivate", requireAdmin, async (req, res): Promise<void> => {
-  const memId = req.params.id as string;
+router.post("/memories/:id/reactivate", requireUuidParam("id"), requireAdmin, async (req, res): Promise<void> => {
+  const memId = String(req.params.id);
 
   const [mem] = await db.select({ id: memories.id }).from(memories).where(eq(memories.id, memId)).limit(1);
   if (!mem) { res.status(404).json({ error: "Memory not found" }); return; }

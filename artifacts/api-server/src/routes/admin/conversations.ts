@@ -14,6 +14,7 @@ import { Router } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, users, conversations, conversationMessages } from "@workspace/db";
 import { requireAdmin } from "../../middlewares/requireAdmin";
+import { requireUuidParam } from "../../middlewares/validateParam";
 
 const router = Router();
 
@@ -21,9 +22,10 @@ const router = Router();
 
 router.get(
   "/users/:id/conversations",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
-    const userId = req.params.id as string;
+    const userId = String(req.params.id);
 
     const [user] = await db
       .select({ id: users.id })
@@ -51,12 +53,15 @@ router.get(
 
 router.get(
   "/conversations/:id",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
+    const convId = String(req.params.id);
+
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(eq(conversations.id, req.params.id as string))
+      .where(eq(conversations.id, convId))
       .limit(1);
 
     if (!conv) {
@@ -72,9 +77,10 @@ router.get(
 
 router.get(
   "/conversations/:id/messages",
+  requireUuidParam("id"),
   requireAdmin,
   async (req, res): Promise<void> => {
-    const convId = req.params.id as string;
+    const convId = String(req.params.id);
 
     const [conv] = await db
       .select()
@@ -99,7 +105,7 @@ router.get(
         createdAt: conversationMessages.createdAt,
       })
       .from(conversationMessages)
-      .where(eq(conversationMessages.conversationId, convId as string))
+      .where(eq(conversationMessages.conversationId, convId))
       .orderBy(conversationMessages.createdAt);
 
     res.json({ conversation: conv, messages });

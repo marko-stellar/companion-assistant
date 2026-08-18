@@ -1,9 +1,128 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDevice, type VoiceError } from "@/contexts/device-context";
 import { AmbientOrb } from "@/components/ambient-orb";
 import type { TodayItem } from "@workspace/api-client-react";
 import type { Strings } from "@/lib/i18n";
 import { getActiveAlerts, type AppointmentAlertItem } from "@/lib/alerts";
+import {
+  fetchPendingCheckIn,
+  acknowledgeCheckIn,
+  synthesizeSpeech,
+} from "@/lib/device-api";
+
+// ── Routine check-in banner ──────────────────────────────────────────────────
+
+/**
+ * Polls /api/tablet/pending-checkin every 60 s.
+ * When a pending check-in is found it speaks the text via /api/tablet/speak,
+ * then acknowledges the check-in. The banner stays visible until dismissed.
+ */
+function usePendingCheckIn() {
+  const [checkIn, setCheckIn] = useState<{
+    id: string;
+    text: string;
+  } | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const activeIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      if (cancelled) return;
+      try {
+        const result = await fetchPendingCheckIn();
+        if (result.pending && result.id !== activeIdRef.current) {
+          activeIdRef.current = result.id;
+          setCheckIn({ id: result.id, text: result.text });
+          setDismissed(false);
+          // Speak the text proactively
+          synthesizeSpeech(result.text).catch(() => {});
+        }
+      } catch {
+        // Ignore network errors — just try again next poll
+      }
+    }
+    void poll();
+    const id = setInterval(poll, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
+  const dismiss = () => {
+    if (!checkIn) return;
+    setDismissed(true);
+    // Fire-and-forget acknowledgement
+    acknowledgeCheckIn(checkIn.id).catch(() => {});
+  };
+
+  return { checkIn: dismissed ? null : checkIn, dismiss };
+}
+
+function CheckInBanner({
+  text,
+  onDismiss,
+}: {
+  text: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex items-start gap-3 rounded-xl px-4 py-3"
+      style={{
+        background: "rgba(80,130,200,0.12)",
+        border: "1px solid rgba(100,160,230,0.30)",
+      }}
+    >
+      {/* Soft blue check-in icon */}
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="rgba(130,180,240,0.85)"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="shrink-0 mt-0.5"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4M12 16h.01" />
+      </svg>
+      <span
+        className="text-base flex-1"
+        style={{
+          color: "rgba(200,225,255,0.88)",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: "italic",
+        }}
+      >
+        {text}
+      </span>
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        style={{
+          background: "rgba(100,160,230,0.18)",
+          border: "1px solid rgba(130,180,240,0.30)",
+          borderRadius: "8px",
+          color: "rgba(200,225,255,0.8)",
+          fontSize: "0.75rem",
+          padding: "4px 12px",
+          cursor: "pointer",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          whiteSpace: "nowrap",
+        }}
+      >
+        OK
+      </button>
+    </div>
+  );
+}
 
 // ── Appointment pre-alert helpers ───────────────────────────────────────────
 
@@ -506,6 +625,7 @@ export function HomePage() {
   const companionName = ctx?.companion?.name ?? "Companion";
   const isDnd = companionState === "dnd";
   const orbSize = orientation === "landscape" ? 220 : 240;
+  const { checkIn, dismiss: dismissCheckIn } = usePendingCheckIn();
 
   const handleTalkPress = () => {
     void activateConversation();
@@ -562,6 +682,11 @@ export function HomePage() {
             )}
             <StateLabel companionState={companionState} t={t} />
           </div>
+
+          {/* Routine check-in banner */}
+          {checkIn && (
+            <CheckInBanner text={checkIn.text} onDismiss={dismissCheckIn} />
+          )}
 
           {/* Appointment pre-alerts */}
           {appointmentAlerts.length > 0 && (
@@ -623,6 +748,9 @@ export function HomePage() {
               </h1>
             </div>
             <div className="flex flex-col gap-3 flex-1 mt-4">
+              {checkIn && (
+                <CheckInBanner text={checkIn.text} onDismiss={dismissCheckIn} />
+              )}
               {appointmentAlerts.length > 0 && (
                 <AppointmentAlertBanner alerts={appointmentAlerts} t={t} />
               )}

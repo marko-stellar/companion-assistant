@@ -15,6 +15,7 @@ import { scheduleService } from "../services/schedule.service";
 import { embeddingProvider } from "../providers/embedding.provider";
 import { localToUtc, ianaZoneOrUtc } from "../lib/local-time";
 import { logger } from "../lib/logger";
+import { activityEventService } from "../services/activity-event.service";
 import type { ToolCallRequest, ToolCallResult, ToolAuditEntry } from "./types";
 
 // ── Argument schemas ─────────────────────────────────────────────────────────
@@ -188,6 +189,11 @@ export class ToolExecutor {
       entityId: appt.id,
     }, conversationId);
 
+    activityEventService.emit(userId, "APPOINTMENT_CREATED", {
+      appointmentId: appt.id,
+      title: args.title,
+    });
+
     return {
       ok: true,
       data: { appointmentId: appt.id, title: args.title, startsAt: startsAtUtc.toISOString() },
@@ -241,6 +247,11 @@ export class ToolExecutor {
       outcome: "success",
       entityType: "temporary_dnd",
     }, conversationId);
+
+    activityEventService.emit(userId, "TEMPORARY_DND_SET", {
+      endsAtLocalTime,
+      endsAt: endsAt.toISOString(),
+    });
 
     return {
       ok: true,
@@ -298,6 +309,17 @@ export class ToolExecutor {
       entityType: "reminder_occurrence",
       entityId: occurrenceId,
     }, conversationId);
+
+    const eventType =
+      response === "YES" ? "MEDICATION_CONFIRMED_TAKEN" :
+      response === "NO"  ? "MEDICATION_CONFIRMED_NOT_TAKEN" :
+                           "REMINDER_CONFIRMED";
+    activityEventService.emit(userId, eventType, {
+      occurrenceId,
+      reminderId: row.reminder.id,
+      reminderTitle: row.reminder.title,
+      medicationName: row.reminder.medicationName ?? undefined,
+    });
 
     const messages: Record<string, string> = {
       YES: `Got it — I've noted that you took ${row.reminder.medicationName ?? "your medication"}.`,

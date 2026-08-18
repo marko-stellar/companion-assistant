@@ -1,9 +1,10 @@
 import crypto from "crypto";
 import { Router } from "express";
-import { eq, and, isNull, gt } from "drizzle-orm";
-import { db, deviceSetupCodes, deviceSessions, users, companions, dndPeriods } from "@workspace/db";
+import { eq, and, isNull, isNotNull, gt } from "drizzle-orm";
+import { db, deviceSetupCodes, deviceSessions, users, companions, dndPeriods, routineDeviations } from "@workspace/db";
 import { requireDevice } from "../../middlewares/requireDevice";
 import { remindersService } from "../../domains/reminders";
+import { routineService } from "../../domains/routine";
 import { scheduleService } from "../../services/schedule.service";
 import conversationRouter from "./conversation";
 
@@ -182,6 +183,50 @@ router.post(
       { occurrenceId, response, reminderId: row.reminder.id },
       "Reminder occurrence response recorded",
     );
+    res.json({ ok: true });
+  },
+);
+
+// GET /tablet/pending-checkin — first unacknowledged routine check-in for this user
+router.get("/pending-checkin", requireDevice, async (req, res): Promise<void> => {
+  const userId = req.deviceUserId!;
+  const pending = await db
+    .select({
+      id: routineDeviations.id,
+      checkInText: routineDeviations.checkInText,
+      detectedAtUtc: routineDeviations.detectedAtUtc,
+    })
+    .from(routineDeviations)
+    .where(
+      and(
+        eq(routineDeviations.userId, userId),
+        isNull(routineDeviations.checkInTriggeredAt),
+        isNull(routineDeviations.resolvedAtUtc),
+        isNotNull(routineDeviations.checkInText),
+      ),
+    )
+    .orderBy(routineDeviations.detectedAtUtc)
+    .limit(1);
+
+  if (!pending.length || !pending[0]!.checkInText) {
+    res.json({ pending: false });
+    return;
+  }
+  res.json({ pending: true, id: pending[0]!.id, text: pending[0]!.checkInText });
+});
+
+// POST /tablet/pending-checkin/:id/acknowledge — mark check-in as spoken
+router.post(
+  "/pending-checkin/:id/acknowledge",
+  requireDevice,
+  async (req, res): Promise<void> => {
+    const userId = req.deviceUserId!;
+    const id = String(req.params.id);
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(id)) { res.status(404).json({ error: "Not found" }); return; }
+    const ok = await routineService.acknowledgeCheckIn(id, new Date());
+    if (!ok) { res.status(404).json({ error: "Check-in not found or already acknowledged" }); return; }
+    req.log.info({ userId, deviationId: id }, "Routine check-in acknowledged");
     res.json({ ok: true });
   },
 );

@@ -38,6 +38,8 @@ import { conversationSummaryService } from "../../services/conversation-summary.
 import { memoryExtractionService } from "../../services/memory-extraction.service";
 import { parseToolCall, toolExecutor } from "../../tools";
 import { buildToolsPromptSection } from "../../tools/definitions";
+import { activityEventService } from "../../services/activity-event.service";
+import { routineService } from "../../domains/routine";
 
 const router = Router();
 
@@ -118,12 +120,24 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
 
   // ── 4. Get or create conversation session ─────────────────────────────────
   let convId = existingConvId;
+  const isNewConversation = !convId;
   if (!convId) {
     const [conv] = await db
       .insert(conversations)
       .values({ userId, language: effectiveLang })
       .returning({ id: conversations.id });
     convId = conv.id;
+  }
+
+  // Emit activity event — fire-and-forget, never blocks the voice loop.
+  // Only emit on the first turn of each conversation to count distinct sessions.
+  if (isNewConversation) {
+    activityEventService.emit(userId, "USER_STARTED_CONVERSATION", {
+      conversationId: convId,
+      language: effectiveLang,
+    });
+    // Resolve any open routine-deviation check-ins — user has now been heard from
+    void routineService.resolveOpenDeviations(userId, new Date()).catch(() => {});
   }
 
   // ── 5. Build bounded context window (with retrieved memories) ────────────

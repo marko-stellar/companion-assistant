@@ -7,6 +7,7 @@ import conversationsRouter from "./conversations";
 import memoriesRouter from "./memories";
 import remindersRouter from "./reminders";
 import appointmentsRouter from "./appointments";
+import routinesRouter from "./routines";
 
 /**
  * Admin API route group — /api/admin/*
@@ -28,5 +29,6 @@ router.use(conversationsRouter);
 router.use(memoriesRouter);
 router.use(remindersRouter);
 router.use(appointmentsRouter);
+router.use(routinesRouter);
 
 export default router;

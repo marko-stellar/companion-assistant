@@ -140,6 +140,31 @@ export interface SpeakResponse {
  * Used for proactive spoken alerts such as appointment reminders.
  * Throws on network errors or non-2xx responses.
  */
+// ── Routine check-in ─────────────────────────────────────────────────────────
+
+export type PendingCheckIn =
+  | { pending: false }
+  | { pending: true; id: string; text: string };
+
+/** Poll for the oldest unacknowledged routine check-in for this device's user. */
+export async function fetchPendingCheckIn(): Promise<PendingCheckIn> {
+  const token = getStoredToken();
+  const res = await fetch("/api/tablet/pending-checkin", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) return { pending: false }; // treat errors as no pending check-in
+  return res.json() as Promise<PendingCheckIn>;
+}
+
+/** Mark a check-in as acknowledged (called after speaking the text). */
+export async function acknowledgeCheckIn(id: string): Promise<void> {
+  const token = getStoredToken();
+  await fetch(`/api/tablet/pending-checkin/${id}/acknowledge`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+}
+
 export async function synthesizeSpeech(text: string): Promise<SpeakResponse> {
   const token = getStoredToken();
   const res = await fetch("/api/tablet/speak", {

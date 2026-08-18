@@ -3,8 +3,9 @@ import { db, users, reminders, dndPeriods, temporaryDnd } from "@workspace/db";
 import type { Reminder, DndPeriod, Weekday } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { remindersService } from "../domains/reminders";
-import { routineService } from "../domains/routine";
 import { proactivityService } from "../domains/proactivity";
+import { activityEventService } from "../services/activity-event.service";
+import { routineInferenceService } from "../services/routine-inference.service";
 import {
   ianaZoneOrUtc,
   getLocalParts,
@@ -30,10 +31,14 @@ const GENERATION_WINDOW_DAYS = 7;
  * CONSTRAINT: Routine deviation detection (tick) must NEVER directly
  * trigger an emergency SMS. Only SafetyService may authorise SMS.
  */
+/** Run routine inference at most once every 6 hours. */
+const INFERENCE_INTERVAL_MS = 6 * 60 * 60 * 1_000;
+
 export class AppScheduler {
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
   private readonly TICK_INTERVAL_MS = 60_000; // one minute
   private isRunning = false;
+  private lastInferenceAt = 0; // epoch ms
 
   start(): void {
     if (this.intervalHandle) {
@@ -68,9 +73,9 @@ export class AppScheduler {
     try {
       await Promise.allSettled([
         this.checkReminders(nowUtc),
-        this.checkRoutines(nowUtc),
         this.checkProactivity(nowUtc),
         this.cleanExpiredTemporaryDnd(nowUtc),
+        this.maybeRunInference(nowUtc),
       ]);
     } finally {
       this.isRunning = false;
@@ -216,6 +221,13 @@ export class AppScheduler {
       }
 
       await remindersService.markTriggered(occurrence.id, nowUtc);
+      // Emit activity event (fire-and-forget)
+      activityEventService.emit(reminder.userId, "REMINDER_TRIGGERED", {
+        occurrenceId: occurrence.id,
+        reminderId: reminder.id,
+        reminderType: reminder.type,
+        reminderTitle: reminder.title,
+      });
       logger.info(
         {
           occurrenceId: occurrence.id,
@@ -231,13 +243,15 @@ export class AppScheduler {
     }
   }
 
-  private async checkRoutines(nowUtc: Date): Promise<void> {
+  /** Run routine inference at most once every INFERENCE_INTERVAL_MS (6 h). */
+  private async maybeRunInference(nowUtc: Date): Promise<void> {
+    if (nowUtc.getTime() - this.lastInferenceAt < INFERENCE_INTERVAL_MS) return;
+    this.lastInferenceAt = nowUtc.getTime();
     try {
-      // IMPORTANT: detectDeviations records deviations only.
-      // It does NOT trigger SMS — that is the safety domain's responsibility.
-      await routineService.detectDeviations(nowUtc);
+      await routineInferenceService.inferForAllUsers();
+      logger.info("Routine inference completed");
     } catch (err) {
-      logger.error({ err }, "Error checking routines");
+      logger.error({ err }, "Error running routine inference");
     }
   }
 

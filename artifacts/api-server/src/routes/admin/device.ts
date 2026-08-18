@@ -23,7 +23,7 @@ router.get(
   "/users/:id/device-status",
   requireAdmin,
   async (req, res): Promise<void> => {
-    const id = req.params.id;
+    const id = String(req.params.id);
 
     const [session] = await db
       .select({ lastSeenAt: deviceSessions.lastSeenAt })
@@ -59,7 +59,7 @@ router.post(
   "/users/:id/device-code",
   requireAdmin,
   async (req, res): Promise<void> => {
-    const id = req.params.id;
+    const id = String(req.params.id);
 
     const [user] = await db
       .select({ id: users.id })
@@ -94,7 +94,7 @@ router.delete(
   "/users/:id/device-session",
   requireAdmin,
   async (req, res): Promise<void> => {
-    const id = req.params.id;
+    const id = String(req.params.id);
 
     const result = await db
       .update(deviceSessions)

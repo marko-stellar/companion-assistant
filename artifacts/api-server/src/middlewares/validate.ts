@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { type ZodSchema, ZodError } from "zod";
+import { type ZodSchema, ZodError, type ZodIssue } from "zod";
 
 type RequestTarget = "body" | "query" | "params";
 
@@ -17,7 +17,7 @@ export function validate<T>(
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req[target]);
     if (!result.success) {
-      const issues = result.error.issues.map((i) => ({
+      const issues = result.error.issues.map((i: ZodIssue) => ({
         path: i.path.join("."),
         message: i.message,
       }));
@@ -25,7 +25,7 @@ export function validate<T>(
       return;
     }
     // Replace with parsed+coerced data
-    (req as Record<string, unknown>)[target] = result.data;
+    (req as unknown as Record<string, unknown>)[target] = result.data;
     next();
   };
 }

@@ -51,6 +51,10 @@ import type {
   ReminderResponse,
   ReminderUpdateRequest,
   RemindersResponse,
+  SafetyEventList,
+  SafetyEventResponse,
+  SafetyTestSMSInput,
+  SafetyTestSMSResult,
   TabletContext,
   TabletSetupInput,
   TabletSetupResponse,
@@ -2641,6 +2645,302 @@ export const useCreateAdminNewsSource = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreateAdminNewsSourceMutationOptions(options));
+    }
+
+export const getGetAdminUserSafetyEventsUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/safety-events`
+}
+
+/**
+ * @summary List safety events for a senior user
+ */
+export const getAdminUserSafetyEvents = async (id: string, options?: RequestInit): Promise<SafetyEventList> => {
+
+  return customFetch<SafetyEventList>(getGetAdminUserSafetyEventsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminUserSafetyEventsQueryKey = (id: string,) => {
+    return [
+    `/api/admin/users/${id}/safety-events`
+    ] as const;
+    }
+
+
+export const getGetAdminUserSafetyEventsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminUserSafetyEvents>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminUserSafetyEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminUserSafetyEventsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminUserSafetyEvents>>> = ({ signal }) => getAdminUserSafetyEvents(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminUserSafetyEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminUserSafetyEventsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminUserSafetyEvents>>>
+export type GetAdminUserSafetyEventsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List safety events for a senior user
+ */
+
+export function useGetAdminUserSafetyEvents<TData = Awaited<ReturnType<typeof getAdminUserSafetyEvents>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminUserSafetyEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminUserSafetyEventsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminSafetyEventUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/safety-events/${id}`
+}
+
+/**
+ * @summary Single safety event detail
+ */
+export const getAdminSafetyEvent = async (id: string, options?: RequestInit): Promise<SafetyEventResponse> => {
+
+  return customFetch<SafetyEventResponse>(getGetAdminSafetyEventUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminSafetyEventQueryKey = (id: string,) => {
+    return [
+    `/api/admin/safety-events/${id}`
+    ] as const;
+    }
+
+
+export const getGetAdminSafetyEventQueryOptions = <TData = Awaited<ReturnType<typeof getAdminSafetyEvent>>, TError = ErrorType<ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSafetyEvent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminSafetyEventQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminSafetyEvent>>> = ({ signal }) => getAdminSafetyEvent(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminSafetyEvent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminSafetyEventQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminSafetyEvent>>>
+export type GetAdminSafetyEventQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Single safety event detail
+ */
+
+export function useGetAdminSafetyEvent<TData = Awaited<ReturnType<typeof getAdminSafetyEvent>>, TError = ErrorType<ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSafetyEvent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminSafetyEventQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getResolveAdminSafetyEventUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/safety-events/${id}/resolve`
+}
+
+/**
+ * @summary Mark a safety event as reviewed/resolved
+ */
+export const resolveAdminSafetyEvent = async (id: string, options?: RequestInit): Promise<SafetyEventResponse> => {
+
+  return customFetch<SafetyEventResponse>(getResolveAdminSafetyEventUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResolveAdminSafetyEventMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveAdminSafetyEvent>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resolveAdminSafetyEvent>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['resolveAdminSafetyEvent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolveAdminSafetyEvent>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  resolveAdminSafetyEvent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResolveAdminSafetyEventMutationResult = NonNullable<Awaited<ReturnType<typeof resolveAdminSafetyEvent>>>
+
+    export type ResolveAdminSafetyEventMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Mark a safety event as reviewed/resolved
+ */
+export const useResolveAdminSafetyEvent = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveAdminSafetyEvent>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resolveAdminSafetyEvent>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getResolveAdminSafetyEventMutationOptions(options));
+    }
+
+export const getSendAdminSafetyTestSMSUrl = () => {
+
+
+
+
+  return `/api/admin/safety/test-sms`
+}
+
+/**
+ * @summary Send a clearly labelled test SMS to a designated test number
+ */
+export const sendAdminSafetyTestSMS = async (safetyTestSMSInput: SafetyTestSMSInput, options?: RequestInit): Promise<SafetyTestSMSResult> => {
+
+  return customFetch<SafetyTestSMSResult>(getSendAdminSafetyTestSMSUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(safetyTestSMSInput)
+  }
+);}
+
+
+
+
+
+export const getSendAdminSafetyTestSMSMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendAdminSafetyTestSMS>>, TError,{data: BodyType<SafetyTestSMSInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendAdminSafetyTestSMS>>, TError,{data: BodyType<SafetyTestSMSInput>}, TContext> => {
+
+const mutationKey = ['sendAdminSafetyTestSMS'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendAdminSafetyTestSMS>>, {data: BodyType<SafetyTestSMSInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendAdminSafetyTestSMS(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendAdminSafetyTestSMSMutationResult = NonNullable<Awaited<ReturnType<typeof sendAdminSafetyTestSMS>>>
+    export type SendAdminSafetyTestSMSMutationBody = BodyType<SafetyTestSMSInput>
+    export type SendAdminSafetyTestSMSMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Send a clearly labelled test SMS to a designated test number
+ */
+export const useSendAdminSafetyTestSMS = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendAdminSafetyTestSMS>>, TError,{data: BodyType<SafetyTestSMSInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendAdminSafetyTestSMS>>,
+        TError,
+        {data: BodyType<SafetyTestSMSInput>},
+        TContext
+      > => {
+      return useMutation(getSendAdminSafetyTestSMSMutationOptions(options));
     }
 
 export const getUpdateAdminNewsSourceUrl = (id: string,) => {

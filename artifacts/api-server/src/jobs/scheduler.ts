@@ -76,9 +76,22 @@ export class AppScheduler {
         this.checkProactivity(nowUtc),
         this.cleanExpiredTemporaryDnd(nowUtc),
         this.maybeRunInference(nowUtc),
+        // Re-drives delivery of EXISTING conversation-sourced safety alerts
+        // stuck mid-send (crash/hang). Never classifies or creates events —
+        // routine detection still cannot trigger safety SMS.
+        this.recoverStaleSafetyAlerts(nowUtc),
       ]);
     } finally {
       this.isRunning = false;
+    }
+  }
+
+  private async recoverStaleSafetyAlerts(nowUtc: Date): Promise<void> {
+    try {
+      const { safetyService } = await import("../domains/safety");
+      await safetyService.recoverStaleAlerts(nowUtc);
+    } catch (err) {
+      logger.error({ errName: err instanceof Error ? err.name : "UnknownError" }, "Error recovering stale safety alerts");
     }
   }
 

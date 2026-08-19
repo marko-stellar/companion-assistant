@@ -44,6 +44,7 @@ import { RemindersTab } from "./tabs/reminders-tab";
 import { RoutinesTab } from "./tabs/routines-tab";
 import { AppointmentsTab } from "./tabs/appointments-tab";
 import { PhotosTab } from "./tabs/photos-tab";
+import { SafetyTab } from "./tabs/safety-tab";
 
 // -----------------------------------------------------------------------------
 // PROFILE TAB
@@ -1438,7 +1439,7 @@ export function UserDetail() {
     { id: "memories", label: "Memories", icon: Brain, component: <MemoriesTab userId={user.id} /> },
     { id: "routines", label: "Routines", icon: ListChecks, component: <RoutinesTab userId={user.id} /> },
     { id: "conversations", label: "Conversations", icon: MessageSquare, component: <ConversationsTab userId={user.id} /> },
-    { id: "safety", label: "Safety", icon: Shield, component: <PlaceholderTab title="Safety & Alerts" description="Configure fall detection, prolonged silence, and distress word alerts." icon={Shield} /> },
+    { id: "safety", label: "Safety", icon: Shield, component: <SafetyTab userId={user.id} /> },
     { id: "device", label: "Device", icon: Tablet, component: <DeviceTab userId={user.id} /> },
   ];
 

@@ -525,6 +525,108 @@ export interface NewsSourceUpdateInput {
   trustScore?: number;
 }
 
+export type SafetyEventCategory = typeof SafetyEventCategory[keyof typeof SafetyEventCategory];
+
+
+export const SafetyEventCategory = {
+  FALL: 'FALL',
+  CHEST_PAIN: 'CHEST_PAIN',
+  BREATHING: 'BREATHING',
+  SELF_HARM: 'SELF_HARM',
+  OTHER_URGENT: 'OTHER_URGENT',
+} as const;
+
+export type SafetyEventSeverity = typeof SafetyEventSeverity[keyof typeof SafetyEventSeverity];
+
+
+export const SafetyEventSeverity = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export type SafetyEventAlertStatus = typeof SafetyEventAlertStatus[keyof typeof SafetyEventAlertStatus];
+
+
+export const SafetyEventAlertStatus = {
+  NONE: 'NONE',
+  PENDING: 'PENDING',
+  SENDING: 'SENDING',
+  SENT: 'SENT',
+  SIMULATED: 'SIMULATED',
+  FAILED: 'FAILED',
+} as const;
+
+export interface SafetyEvent {
+  id: string;
+  userId: string;
+  /** @nullable */
+  conversationId?: string | null;
+  classification: string;
+  category: SafetyEventCategory;
+  severity: SafetyEventSeverity;
+  /** @nullable */
+  confidence?: number | null;
+  /** @nullable */
+  reasoning?: string | null;
+  source: string;
+  /** @nullable */
+  triggerText?: string | null;
+  alertStatus: SafetyEventAlertStatus;
+  /** @nullable */
+  recipientName?: string | null;
+  /** @nullable */
+  recipientPhone?: string | null;
+  /** @nullable */
+  providerMessageId?: string | null;
+  /** @nullable */
+  providerError?: string | null;
+  smsAttempts: number;
+  /** @nullable */
+  lastAttemptAt?: string | null;
+  smsSent: boolean;
+  /** @nullable */
+  smsSentAt?: string | null;
+  resolved: boolean;
+  /** @nullable */
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SafetyEventList {
+  events: SafetyEvent[];
+}
+
+export interface SafetyEventResponse {
+  event: SafetyEvent;
+}
+
+export type SafetyTestSMSInputLanguage = typeof SafetyTestSMSInputLanguage[keyof typeof SafetyTestSMSInputLanguage];
+
+
+export const SafetyTestSMSInputLanguage = {
+  en: 'en',
+  hr: 'hr',
+} as const;
+
+export interface SafetyTestSMSInput {
+  /**
+     * Designated test phone number (E.164 preferred)
+     * @minLength 6
+     */
+  phone: string;
+  language?: SafetyTestSMSInputLanguage;
+}
+
+export interface SafetyTestSMSResult {
+  success: boolean;
+  /** true when delivery was only simulated by the development mock provider — no real SMS was sent */
+  simulated?: boolean;
+  providerMessageId?: string;
+  error?: string;
+}
+
 export type OccurrenceRespondRequestResponse = typeof OccurrenceRespondRequestResponse[keyof typeof OccurrenceRespondRequestResponse];
 
 

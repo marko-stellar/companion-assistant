@@ -43,6 +43,13 @@
       "when": 1787052195171,
       "tag": "20260818112315_spicy_shiver_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787475600000,
+      "tag": "20260819092000_safety_escalation_fields",
+      "breakpoints": true
     }
   ]
 }

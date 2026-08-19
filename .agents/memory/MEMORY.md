@@ -8,4 +8,5 @@
 - [COMPANION memory system](companion-memory-system.md) — extraction (LLM→JSON), pgvector retrieval with keyword fallback, voice correction audit trail, admin CRUD routes, drizzle-kit TTY migration workaround.
 - [COMPANION tool system](companion-tool-system.md) — 6 typed tools, userId always from session, <tool_call> parsing, temporary_dnd table, MockLLM keyword detection, audit redaction rules.
 - [COMPANION routine awareness](companion-routine-awareness.md) — rule-based inference (3 types), 6-h inference cadence, deviation check-in via tablet poll, admin RoutinesTab, activity events from executor/scheduler/conversation.
+- [COMPANION safety escalation](companion-safety-escalation.md) — separate classifySafety LLM call, DB-atomic SMS claim (PENDING→SENDING), visible FAILED status, content-free logging.
 - [COMPANION photo memories](companion-photo-memories.md) — two-step presigned upload, ObjectStorageService.getObjectEntityReadURL(), show_photo tool with ownership check, identity safety rule in 3 places, lib/db tsc --build required after schema changes.

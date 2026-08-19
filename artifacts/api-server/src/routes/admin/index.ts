@@ -10,6 +10,7 @@ import appointmentsRouter from "./appointments";
 import routinesRouter from "./routines";
 import photosRouter from "./photos";
 import newsSourcesRouter from "./news-sources";
+import safetyRouter from "./safety";
 
 /**
  * Admin API route group — /api/admin/*
@@ -34,5 +35,6 @@ router.use(appointmentsRouter);
 router.use(routinesRouter);
 router.use(photosRouter);
 router.use(newsSourcesRouter);
+router.use(safetyRouter);
 
 export default router;

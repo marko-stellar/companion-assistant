@@ -20,11 +20,15 @@
 import type { SpeechProvider } from "./speech.provider";
 import type { LLMProvider } from "./llm.provider";
 import type { SearchProvider } from "./search.provider";
+import type { NotificationProvider } from "./notification.provider";
 import { ElevenLabsSpeechProvider } from "./impl/elevenlabs-speech.provider";
 import { MockSpeechProvider } from "./impl/mock-speech.provider";
 import { MockLLMProvider } from "./impl/mock-llm.provider";
 import { MockSearchProvider } from "./impl/mock-search.provider";
 import { UnavailableSearchProvider } from "./impl/unavailable-search.provider";
+import { TwilioSMSProvider } from "./impl/twilio-sms.provider";
+import { MockSMSProvider } from "./impl/mock-sms.provider";
+import { UnavailableSMSProvider } from "./impl/unavailable-sms.provider";
 
 // ── Voice ID table ──────────────────────────────────────────────────────────
 // Default IDs are ElevenLabs pre-made voices (multilingual-capable).
@@ -70,6 +74,30 @@ function buildSearchProvider(): SearchProvider {
   return new UnavailableSearchProvider();
 }
 
+// ── Notification (SMS) provider ─────────────────────────────────────────────
+// Selection:
+//   TWILIO_* secrets set     → TwilioSMSProvider (real delivery)
+//   NODE_ENV=development     → MockSMSProvider (simulated success, dev only)
+//   otherwise                → UnavailableSMSProvider (fails explicitly and
+//                              visibly — never silently marked sent)
+function buildNotificationProvider(): NotificationProvider {
+  if (
+    process.env.TWILIO_ACCOUNT_SID &&
+    process.env.TWILIO_AUTH_TOKEN &&
+    process.env.TWILIO_PHONE_NUMBER
+  ) {
+    console.info("[registry] Using TwilioSMSProvider");
+    return new TwilioSMSProvider();
+  }
+  if (process.env.NODE_ENV === "development") {
+    console.warn("[registry] Using MockSMSProvider (development only — simulated delivery)");
+    return new MockSMSProvider();
+  }
+  console.warn("[registry] No SMS provider configured — safety alerts will fail explicitly");
+  return new UnavailableSMSProvider();
+}
+
 export const speechProvider: SpeechProvider = buildSpeechProvider();
 export const llmProvider: LLMProvider = buildLLMProvider();
 export const searchProvider: SearchProvider = buildSearchProvider();
+export const notificationProvider: NotificationProvider = buildNotificationProvider();

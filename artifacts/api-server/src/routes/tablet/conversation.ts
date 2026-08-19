@@ -42,6 +42,7 @@ import { parseToolCall, toolExecutor } from "../../tools";
 import { buildToolsPromptSection } from "../../tools/definitions";
 import { activityEventService } from "../../services/activity-event.service";
 import { routineService } from "../../domains/routine";
+import { safetyService, type SafetyTurnOutcome } from "../../domains/safety";
 
 const router = Router();
 
@@ -144,6 +145,29 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     // Resolve any open routine-deviation check-ins — user has now been heard from
     void routineService.resolveOpenDeviations(userId, new Date()).catch(() => {});
   }
+
+  // ── 4b. Independent safety classification (separate LLM call) ────────────
+  // Runs in parallel with the normal response turn for EVERY finalized
+  // utterance. A classifier failure must never break the conversation —
+  // it is caught and logged content-free (no utterance text, no provider
+  // error message which could echo request content).
+  const safetyPromise: Promise<SafetyTurnOutcome | null> = safetyService
+    .evaluateConversationTurn({
+      userId,
+      conversationId: convId,
+      userText: transcript,
+      userName:
+        user.preferredFormOfAddress ?? user.firstName ?? user.displayName,
+      timezone,
+      language: effectiveLang,
+    })
+    .catch((err) => {
+      req.log.error(
+        { userId, convId, errName: err instanceof Error ? err.name : "UnknownError" },
+        "Safety classification failed",
+      );
+      return null;
+    });
 
   // ── 5. Load photo context + available photos ──────────────────────────────
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -298,6 +322,14 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
 
   const llmLatencyMs = Date.now() - llmStart;
 
+  // ── 7c. Apply safety outcome ──────────────────────────────────────────────
+  // When this turn was classified urgent, the calm safety guidance replaces
+  // the normal reply. The conversation keeps running either way.
+  const safetyOutcome = await safetyPromise;
+  if (safetyOutcome?.urgent && safetyOutcome.guidance) {
+    reply = safetyOutcome.guidance;
+  }
+
   // ── 7. Synthesize speech (TTS) ────────────────────────────────────────────
   const voiceId = companion
     ? (COMPANION_VOICE_IDS[companion.name] ??
@@ -408,6 +440,8 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     conversationId: convId,
     // Present when show_photo was called successfully this turn
     ...(responsePhotoUrl ? { photoUrl: responsePhotoUrl, photoId: responsePhotoId } : {}),
+    // Present when this turn triggered a safety concern
+    ...(safetyOutcome?.urgent ? { safetyAlert: true } : {}),
   });
 });
 

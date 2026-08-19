@@ -810,6 +810,134 @@ export const CreateAdminNewsSourceResponse = zod.object({
 
 
 /**
+ * @summary List safety events for a senior user
+ */
+export const GetAdminUserSafetyEventsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAdminUserSafetyEventsResponse = zod.object({
+  "events": zod.array(zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "conversationId": zod.string().nullish(),
+  "classification": zod.string(),
+  "category": zod.enum(['FALL', 'CHEST_PAIN', 'BREATHING', 'SELF_HARM', 'OTHER_URGENT']),
+  "severity": zod.enum(['low', 'medium', 'high']),
+  "confidence": zod.number().nullish(),
+  "reasoning": zod.string().nullish(),
+  "source": zod.string(),
+  "triggerText": zod.string().nullish(),
+  "alertStatus": zod.enum(['NONE', 'PENDING', 'SENDING', 'SENT', 'SIMULATED', 'FAILED']),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
+  "providerMessageId": zod.string().nullish(),
+  "providerError": zod.string().nullish(),
+  "smsAttempts": zod.number(),
+  "lastAttemptAt": zod.string().nullish(),
+  "smsSent": zod.boolean(),
+  "smsSentAt": zod.string().nullish(),
+  "resolved": zod.boolean(),
+  "resolvedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Single safety event detail
+ */
+export const GetAdminSafetyEventParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetAdminSafetyEventResponse = zod.object({
+  "event": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "conversationId": zod.string().nullish(),
+  "classification": zod.string(),
+  "category": zod.enum(['FALL', 'CHEST_PAIN', 'BREATHING', 'SELF_HARM', 'OTHER_URGENT']),
+  "severity": zod.enum(['low', 'medium', 'high']),
+  "confidence": zod.number().nullish(),
+  "reasoning": zod.string().nullish(),
+  "source": zod.string(),
+  "triggerText": zod.string().nullish(),
+  "alertStatus": zod.enum(['NONE', 'PENDING', 'SENDING', 'SENT', 'SIMULATED', 'FAILED']),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
+  "providerMessageId": zod.string().nullish(),
+  "providerError": zod.string().nullish(),
+  "smsAttempts": zod.number(),
+  "lastAttemptAt": zod.string().nullish(),
+  "smsSent": zod.boolean(),
+  "smsSentAt": zod.string().nullish(),
+  "resolved": zod.boolean(),
+  "resolvedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Mark a safety event as reviewed/resolved
+ */
+export const ResolveAdminSafetyEventParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ResolveAdminSafetyEventResponse = zod.object({
+  "event": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "conversationId": zod.string().nullish(),
+  "classification": zod.string(),
+  "category": zod.enum(['FALL', 'CHEST_PAIN', 'BREATHING', 'SELF_HARM', 'OTHER_URGENT']),
+  "severity": zod.enum(['low', 'medium', 'high']),
+  "confidence": zod.number().nullish(),
+  "reasoning": zod.string().nullish(),
+  "source": zod.string(),
+  "triggerText": zod.string().nullish(),
+  "alertStatus": zod.enum(['NONE', 'PENDING', 'SENDING', 'SENT', 'SIMULATED', 'FAILED']),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
+  "providerMessageId": zod.string().nullish(),
+  "providerError": zod.string().nullish(),
+  "smsAttempts": zod.number(),
+  "lastAttemptAt": zod.string().nullish(),
+  "smsSent": zod.boolean(),
+  "smsSentAt": zod.string().nullish(),
+  "resolved": zod.boolean(),
+  "resolvedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Send a clearly labelled test SMS to a designated test number
+ */
+export const sendAdminSafetyTestSMSBodyPhoneMin = 6;
+
+
+
+export const SendAdminSafetyTestSMSBody = zod.object({
+  "phone": zod.string().min(sendAdminSafetyTestSMSBodyPhoneMin).describe('Designated test phone number (E.164 preferred)'),
+  "language": zod.enum(['en', 'hr']).optional()
+})
+
+export const SendAdminSafetyTestSMSResponse = zod.object({
+  "success": zod.boolean(),
+  "simulated": zod.boolean().optional().describe('true when delivery was only simulated by the development mock provider — no real SMS was sent'),
+  "providerMessageId": zod.string().optional(),
+  "error": zod.string().optional()
+})
+
+
+/**
  * @summary Update or enable/disable a trusted news source
  */
 export const UpdateAdminNewsSourceParams = zod.object({

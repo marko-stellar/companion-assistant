@@ -47,11 +47,26 @@ export interface ClassifySafetyParams {
   recentContext?: string;
 }
 
+/** Urgent-concern category detected by the independent safety classifier. */
+export type SafetyCategory =
+  | "NONE"
+  | "FALL"
+  | "CHEST_PAIN"
+  | "BREATHING"
+  | "SELF_HARM"
+  | "OTHER_URGENT";
+
 export interface SafetyClassification {
   classification: string;
+  /** 'NONE' when no urgent concern was detected */
+  category: SafetyCategory;
   /** 'low' | 'medium' | 'high' */
   severity: "low" | "medium" | "high";
+  /** Classifier confidence 0.0–1.0 */
+  confidence: number;
+  /** true = family SMS should be sent (subject to SafetyService thresholds) */
   requiresImmediateAttention: boolean;
+  /** Short internal reasoning — for audit only, never spoken or logged with PII */
   reasoning?: string;
 }
 

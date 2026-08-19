@@ -18,6 +18,18 @@ export interface SendSMSResult {
   success: boolean;
   providerMessageId?: string;
   error?: string;
+  /**
+   * true when delivery was only simulated (development mock). Callers MUST
+   * NOT present a simulated result as a real family notification.
+   */
+  simulated?: boolean;
+  /**
+   * true when the outcome is unknown (e.g. timeout after the request may
+   * have been accepted by the provider). Callers MUST NOT auto-retry an
+   * ambiguous send — that risks duplicate real messages; surface it for
+   * manual verification instead.
+   */
+  ambiguous?: boolean;
 }
 
 export interface NotificationProvider {

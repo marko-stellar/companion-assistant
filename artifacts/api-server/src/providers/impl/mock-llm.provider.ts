@@ -24,6 +24,7 @@ import type {
   ClassifySafetyResult,
   AnalyzeImageParams,
   AnalyzeImageResult,
+  SafetyCategory,
 } from "../llm.provider";
 
 // ── Response banks ──────────────────────────────────────────────────────────
@@ -336,11 +337,68 @@ export class MockLLMProvider implements LLMProvider {
     return { memories: [] };
   }
 
-  async classifySafety(_params: ClassifySafetyParams): Promise<ClassifySafetyResult> {
+  /**
+   * Deterministic keyword-based safety classification so the full
+   * escalation pipeline can be exercised in development without a real LLM.
+   * Controlled phrases (HR + EN):
+   *   "Pao sam i ne mogu ustati" / "I fell and can't get up"  → FALL
+   *   "Boli me u prsima" / "severe chest pain"                → CHEST_PAIN
+   *   "Ne mogu disati" / "I can't breathe"                    → BREATHING
+   *   "Ne želim više živjeti" / "I want to end my life"       → SELF_HARM
+   *   "Upomoć, krvarim" / "help, I'm bleeding badly"          → OTHER_URGENT
+   */
+  async classifySafety({ userText }: ClassifySafetyParams): Promise<ClassifySafetyResult> {
+    const t = userText.toLowerCase();
+
+    const CATEGORY_PATTERNS: Array<{ category: SafetyCategory; label: string; re: RegExp }> = [
+      {
+        category: "FALL",
+        label: "fall_with_inability_to_get_up",
+        re: /\b(pao|pala)\s+sam\b.*\b(ne\s*mogu|nemogu)\s+(ustati|se\s+dić|se\s+dign)|\b(i\s+)?fell\b.*\b(can.?t|cannot|unable\s+to)\s+(get\s+up|stand)|\bfell\s+down\b.*\b(hurt|injured|bleeding)|\b(pao|pala)\s+sam\b.*\b(ozlijed|boli|krvar)/i,
+      },
+      {
+        category: "CHEST_PAIN",
+        label: "severe_chest_pain",
+        re: /\bboli?\s+me\s+(jako\s+)?(u\s+)?prsim|\bstež[ea]\s+(me\s+)?u\s+prsima|\bpritisak\s+u\s+prsima|\bchest\s+pain|\bpain\s+in\s+my\s+chest|\bpressure\s+(in|on)\s+my\s+chest/i,
+      },
+      {
+        category: "BREATHING",
+        label: "severe_breathing_difficulty",
+        re: /\bne\s*mogu\s+disati|\bteško\s+dišem|\bgušim\s+se|\bcan.?t\s+breathe|\bcannot\s+breathe|\bstruggling\s+to\s+breathe|\bchoking\b/i,
+      },
+      {
+        category: "SELF_HARM",
+        label: "imminent_self_harm",
+        re: /\bubit\s+ću\s+se|\bne\s+želim\s+više\s+živjeti|\bokončati?\s+(svoj\s+)?život|\bkill\s+myself|\bend\s+my\s+life|\bhurt\s+myself|\bsuicid|\bdon.?t\s+want\s+to\s+live/i,
+      },
+      {
+        category: "OTHER_URGENT",
+        label: "other_urgent_physical_emergency",
+        re: /\bupomoć\b|\bkrvarim\b|\bhitno\s+mi\s+treba\s+pomoć|\bbleeding\s+(badly|heavily|a\s+lot)|\bhelp\s+me\s+(please\s+)?(now|quickly|urgent)|\bmoždani\s+udar|\bstroke\b/i,
+      },
+    ];
+
+    for (const { category, label, re } of CATEGORY_PATTERNS) {
+      if (re.test(t)) {
+        return {
+          safety: {
+            classification: label,
+            category,
+            severity: "high",
+            confidence: 0.9,
+            requiresImmediateAttention: true,
+            reasoning: `Mock classifier matched ${category} keyword pattern.`,
+          },
+        };
+      }
+    }
+
     return {
       safety: {
         classification: "normal",
+        category: "NONE",
         severity: "low",
+        confidence: 0.95,
         requiresImmediateAttention: false,
       },
     };

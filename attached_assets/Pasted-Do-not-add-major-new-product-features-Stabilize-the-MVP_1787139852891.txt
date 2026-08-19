@@ -1,0 +1,84 @@
+Do not add major new product features. Stabilize the MVP for an EU evaluator and first-user demonstration.
+
+UI POLISH
+Tablet:
+- modern minimal presentation
+- large readable typography
+- generous touch targets
+- clear listening/thinking/speaking states
+- Today schedule visually clear
+- companion visual subtle and high quality
+- Croatian and English strings complete
+- no visible technical/debug text
+- no feedback thumbs
+Admin:
+- clean navigation
+- useful empty states
+- readable transcript/memory/safety tables
+
+LATENCY
+Instrument:
+- audio upload/transcription time
+- LLM time to first response where available
+- TTS time
+- total turn time
+Optimize obvious sequential bottlenecks without compromising correctness.
+
+FAILURE STATES
+Test:
+- no internet
+- microphone permission denied
+- STT failure
+- LLM failure
+- TTS failure
+- search failure
+- SMS failure
+- expired device session
+- object storage failure
+All must fail clearly without application crash.
+
+CROATIAN VOICE BENCHMARK
+Create a simple documented test procedure for at least 30 utterances covering:
+- standard Croatian
+- informal/Dalmatian speech
+- slower speech
+- background TV/room noise
+- Croatian names and places
+- medication names
+- hesitations and corrections
+Record transcription result and whether it is acceptable.
+Keep provider swappable so Deepgram STT can later be compared without application rewrite.
+
+DEMO DATA
+Create a safe seeded DEMO senior account with fictional personal data:
+- Croatian language
+- one emergency test contact placeholder
+- one medication reminder
+- one appointment
+- several relationship/preferences memories
+- one or two photo placeholders only if legally safe and available
+Never use real personal data in the repository.
+
+DEMO SCRIPT SUPPORT
+Make these flows reliable:
+1. proactive Croatian greeting
+2. ask today's schedule
+3. create reminder by voice
+4. recall family memory
+5. discuss photo and store story
+6. ask trusted-source news
+7. set temporary DND
+8. controlled safety phrase -> test SMS
+9. admin view of transcript, memory, routine and safety event
+
+DEPLOYMENT
+- Configure production environment variables using Replit Secrets.
+- Use a deployment mode appropriate for an always-on API/background scheduler, preferably Reserved VM for this MVP.
+- Confirm database and object storage persist independently of deployment filesystem.
+- Add /api/health and optional /api/readiness checks.
+- Document deployment and rollback steps.
+- Tag/commit a known-working MVP version.
+
+FINAL ACCEPTANCE
+Run the full PRD acceptance test list and produce a pass/fail table.
+Do not claim complete if any core flow fails. List remaining defects and severity.

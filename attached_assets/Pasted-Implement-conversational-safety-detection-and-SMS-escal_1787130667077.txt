@@ -1,0 +1,74 @@
+Implement conversational safety detection and SMS escalation. This is a lightweight assistive feature, not an emergency-service guarantee.
+
+ARCHITECTURE
+For every finalized meaningful user utterance:
+- normal Conversation Engine handles the conversation
+- independent SafetyClassifier evaluates potential urgent danger
+Do not rely solely on the main companion system prompt.
+
+MVP SAFETY CATEGORIES
+At minimum detect potentially urgent statements concerning:
+- fall plus inability to get up / injury
+- severe chest pain
+- inability to breathe / severe breathing problem
+- imminent self-harm or immediate danger
+- another clearly urgent physical emergency
+
+CLASSIFICATION OUTPUT
+- category/type
+- severity
+- confidence
+- short reasoning/evidence summary for internal use
+- whether family SMS should be sent
+
+SAFETY EVENT
+Persist:
+- user
+- source CONVERSATION
+- user utterance/evidence text
+- category
+- severity
+- confidence
+- timestamp
+- alert status
+- alert recipient
+- delivery provider result
+Do not place sensitive full conversation transcripts in ordinary logs.
+
+SMS
+Implement NotificationProvider with Twilio or equivalent.
+Use configured active emergency contact.
+SMS must contain useful context, for example:
+"COMPANION safety alert for Marko at 14:32. Marko stated: 'Pao sam i ne mogu ustati.' The system classified this as potentially urgent. Please check on him immediately."
+Localize SMS to a sensible configured/admin language if practical.
+
+USER RESPONSE
+Companion should remain calm and advise immediate human help where appropriate.
+Do not diagnose.
+Do not claim emergency services have been contacted when only family SMS was sent.
+
+FAILURE
+If SMS fails:
+- retain SafetyEvent with failure status
+- retry only with bounded idempotent policy
+- surface failure in admin
+- never silently mark it sent
+
+ADMIN
+Safety tab:
+- chronological events
+- severity/category
+- evidence
+- recipient
+- delivery state
+
+TEST MODE
+Add a safe admin/developer test mechanism so we can test SMS with a designated test number without generating a real emergency workflow.
+
+ACCEPTANCE CRITERIA
+- A controlled phrase such as "Pao sam i ne mogu ustati" creates SafetyEvent.
+- Contextual SMS is sent once to configured test contact.
+- Normal non-urgent statements do not trigger SMS.
+- Routine deviations cannot trigger SafetyEvent SMS.
+- Delivery failure is visible.
+- Main conversation continues with calm appropriate language.

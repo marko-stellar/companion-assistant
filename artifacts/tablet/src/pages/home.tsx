@@ -692,12 +692,26 @@ export function HomePage() {
         <div className="flex flex-col min-h-screen px-6 py-8 gap-6">
           {/* Header: companion name + greeting */}
           <div className="flex flex-col gap-1">
-            <p
-              className="text-sm tracking-[0.2em] uppercase"
-              style={{ color: "rgba(200,155,90,0.55)" }}
-            >
-              {companionName}
-            </p>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(200,155,90,0.14)" }}
+              >
+                <div
+                  className="w-[18px] h-[18px] rounded-full"
+                  style={{ background: "rgba(200,155,90,0.8)" }}
+                />
+              </div>
+              <p
+                className="text-2xl italic font-light tracking-wide lowercase"
+                style={{
+                  fontFamily: "Georgia, serif",
+                  color: "rgba(200,155,90,0.75)",
+                }}
+              >
+                {companionName}
+              </p>
+            </div>
             <h1
               className="text-3xl leading-tight"
               style={{
@@ -778,12 +792,26 @@ export function HomePage() {
             style={{ width: "36%" }}
           >
             <div className="flex flex-col gap-1">
-              <p
-                className="text-xs tracking-[0.2em] uppercase"
-                style={{ color: "rgba(200,155,90,0.55)" }}
-              >
-                {companionName}
-              </p>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(200,155,90,0.14)" }}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full"
+                    style={{ background: "rgba(200,155,90,0.8)" }}
+                  />
+                </div>
+                <p
+                  className="text-xl italic font-light tracking-wide lowercase"
+                  style={{
+                    fontFamily: "Georgia, serif",
+                    color: "rgba(200,155,90,0.75)",
+                  }}
+                >
+                  {companionName}
+                </p>
+              </div>
               <h1
                 className="text-2xl leading-tight"
                 style={{

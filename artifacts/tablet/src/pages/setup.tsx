@@ -73,16 +73,24 @@ export function SetupPage({ onComplete }: SetupPageProps) {
 
       <div className="relative z-10 w-full max-w-sm flex flex-col items-center gap-10">
         {/* Logo / wordmark */}
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+            style={{ background: "rgba(200,155,90,0.14)" }}
+          >
+            <div
+              className="w-6 h-6 rounded-full"
+              style={{ background: "rgba(200,155,90,0.8)" }}
+            />
+          </div>
           <h1
-            className="text-5xl tracking-widest font-light mb-2"
+            className="text-5xl italic font-light tracking-wide lowercase mb-2"
             style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
-              fontStyle: "italic",
+              fontFamily: "Georgia, serif",
               color: "rgba(255,235,200,0.92)",
             }}
           >
-            COMPANION
+            companion
           </h1>
           <p
             className="text-sm tracking-[0.25em] uppercase"

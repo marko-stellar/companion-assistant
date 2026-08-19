@@ -1202,8 +1202,6 @@ components:
           type: ["string", "null"]
         companion:
           $ref: "#/components/schemas/Companion"
-        deviceIdentifier:
-          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1231,8 +1229,6 @@ components:
           enum: [hr, en]
         companionId:
           type: string
-        deviceIdentifier:
-          type: string
         isActive:
           type: boolean
 
@@ -1253,8 +1249,6 @@ components:
           type: string
           enum: [hr, en]
         companionId:
-          type: ["string", "null"]
-        deviceIdentifier:
           type: ["string", "null"]
         isActive:
           type: boolean

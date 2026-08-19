@@ -83,7 +83,6 @@ router.post("/users", requireAdmin, async (req, res): Promise<void> => {
       timezone: data.timezone,
       language: data.language,
       companionId: data.companionId,
-      deviceIdentifier: data.deviceIdentifier,
       isActive: data.isActive ?? true,
     })
     .returning();

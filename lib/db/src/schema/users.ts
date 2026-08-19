@@ -30,8 +30,6 @@ export const users = pgTable(
     companionId: uuid("companion_id").references(() => companions.id),
     /** Tablet PIN hash — placeholder for future tablet lock */
     tabletPinHash: text("tablet_pin_hash"),
-    /** Device/session identifier placeholder for MVP */
-    deviceIdentifier: text("device_identifier"),
     isActive: boolean("is_active").notNull().default(true),
     setupCompletedAt: timestamp("setup_completed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

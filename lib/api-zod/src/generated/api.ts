@@ -116,7 +116,6 @@ export const CreateAdminUserBody = zod.object({
   "timezone": zod.string().min(1),
   "language": zod.enum(['hr', 'en']),
   "companionId": zod.string().optional(),
-  "deviceIdentifier": zod.string().optional(),
   "isActive": zod.boolean().optional()
 })
 
@@ -137,7 +136,6 @@ export const CreateAdminUserResponse = zod.object({
   "tagline": zod.string().nullish(),
   "isActive": zod.boolean()
 }).optional(),
-  "deviceIdentifier": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -167,7 +165,6 @@ export const GetAdminUserResponse = zod.object({
   "tagline": zod.string().nullish(),
   "isActive": zod.boolean()
 }).optional(),
-  "deviceIdentifier": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -191,7 +188,6 @@ export const UpdateAdminUserBody = zod.object({
   "timezone": zod.string().optional(),
   "language": zod.enum(['hr', 'en']).optional(),
   "companionId": zod.string().nullish(),
-  "deviceIdentifier": zod.string().nullish(),
   "isActive": zod.boolean().optional()
 })
 
@@ -212,7 +208,6 @@ export const UpdateAdminUserResponse = zod.object({
   "tagline": zod.string().nullish(),
   "isActive": zod.boolean()
 }).optional(),
-  "deviceIdentifier": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })

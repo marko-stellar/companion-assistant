@@ -84,8 +84,6 @@ export interface UserDetail {
   /** @nullable */
   companionId?: string | null;
   companion?: Companion;
-  /** @nullable */
-  deviceIdentifier?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,7 +106,6 @@ export interface UserInput {
   timezone: string;
   language: UserInputLanguage;
   companionId?: string;
-  deviceIdentifier?: string;
   isActive?: boolean;
 }
 
@@ -131,8 +128,6 @@ export interface UserUpdate {
   language?: UserUpdateLanguage;
   /** @nullable */
   companionId?: string | null;
-  /** @nullable */
-  deviceIdentifier?: string | null;
   isActive?: boolean;
 }
 

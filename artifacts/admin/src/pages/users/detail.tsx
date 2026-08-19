@@ -56,7 +56,6 @@ const profileSchema = z.object({
   timezone: z.string().min(1, "Timezone is required"),
   language: z.enum(["en", "hr"]),
   isActive: z.boolean(),
-  deviceIdentifier: z.string().nullable().optional(),
 });
 type ProfileValues = z.infer<typeof profileSchema>;
 
@@ -79,7 +78,6 @@ function ProfileTab({ user }: { user: UserDetailData }) {
       timezone: user.timezone || "America/New_York",
       language: user.language as "en" | "hr",
       isActive: user.isActive,
-      deviceIdentifier: user.deviceIdentifier || "",
     },
   });
 
@@ -192,20 +190,6 @@ function ProfileTab({ user }: { user: UserDetailData }) {
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="deviceIdentifier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Device Identifier</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value || ""} placeholder="Tablet serial or MAC address" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}

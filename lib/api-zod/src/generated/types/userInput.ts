@@ -17,6 +17,5 @@ export interface UserInput {
   timezone: string;
   language: UserInputLanguage;
   companionId?: string;
-  deviceIdentifier?: string;
   isActive?: boolean;
 }

@@ -18,7 +18,5 @@ export interface UserUpdate {
   language?: UserUpdateLanguage;
   /** @nullable */
   companionId?: string | null;
-  /** @nullable */
-  deviceIdentifier?: string | null;
   isActive?: boolean;
 }

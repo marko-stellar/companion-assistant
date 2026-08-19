@@ -22,8 +22,6 @@ export interface UserDetail {
   /** @nullable */
   companionId?: string | null;
   companion?: Companion;
-  /** @nullable */
-  deviceIdentifier?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

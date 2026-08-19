@@ -25,14 +25,16 @@ so reminders, safety recovery, and routine inference keep running.
 | `PUBLIC_OBJECT_SEARCH_PATHS` | object storage public paths | yes |
 | `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | object storage bucket | yes |
 | `OPENAI_API_KEY` | embeddings for memory retrieval | recommended (keyword fallback otherwise) |
+| `SMS_MODE` | `mock` (default) or explicit `real` delivery | yes — use `real` only intentionally |
 | SMS provider keys (Twilio) | real safety SMS | yes for real escalation — see mock note below |
 | Search provider key | current-info retrieval | optional — see mock note below |
 
 **Provider status (MVP):** conversations currently always use `MockLLMProvider`
 (a real LLM provider is not yet wired into the registry). Mock search and mock
-SMS activate **only in development** (`NODE_ENV=development`); in production
-without configured providers, search and SMS **fail explicitly** rather than
-silently mock — plan the demo accordingly.
+SMS activate when `SMS_MODE` is `mock` (the safe default). Real SMS activates
+only when `SMS_MODE=real` and all Twilio secrets are configured. If
+`SMS_MODE=real` is selected with incomplete credentials, SMS fails explicitly
+instead of silently switching to simulation.
 
 The API logs at startup which providers are real vs. mock — check those lines
 after every deploy. Do not demo with mock providers while claiming real
@@ -77,8 +79,9 @@ delivery; the UI labels mock SMS as SIMULATED by design.
 ## Known development-mode behaviours
 
 - `MockLLMProvider` is currently always used (see provider status above).
-- `MockSearchProvider` and `MockSMSProvider` activate only when
-  `NODE_ENV=development`; SMS mock delivery is surfaced as SIMULATED in the
-  admin UI. In production without providers these features fail explicitly.
+- `MockSearchProvider` activates only when `NODE_ENV=development`.
+- `MockSMSProvider` activates when `SMS_MODE=mock` (including production);
+  simulated delivery is surfaced as SIMULATED in the admin UI. `SMS_MODE=real`
+  requires all Twilio secrets and never falls back to mock delivery.
 - `NoOpEmbeddingProvider` (keyword-fallback memory retrieval) activates when
   `OPENAI_API_KEY` is absent. Each selection is logged at startup.

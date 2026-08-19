@@ -76,11 +76,21 @@ function buildSearchProvider(): SearchProvider {
 
 // ── Notification (SMS) provider ─────────────────────────────────────────────
 // Selection:
-//   TWILIO_* secrets set     → TwilioSMSProvider (real delivery)
-//   NODE_ENV=development     → MockSMSProvider (simulated success, dev only)
-//   otherwise                → UnavailableSMSProvider (fails explicitly and
-//                              visibly — never silently marked sent)
+//   SMS_MODE=mock (default)  → MockSMSProvider (simulated success)
+//   SMS_MODE=real + secrets  → TwilioSMSProvider (real delivery)
+//   SMS_MODE=real, missing   → UnavailableSMSProvider (fails explicitly)
+//
+// Real delivery is opt-in even when Twilio credentials are present. This
+// prevents a deployment or credential change from unexpectedly sending live
+// safety messages.
 function buildNotificationProvider(): NotificationProvider {
+  const smsMode = resolveSmsMode();
+
+  if (smsMode === "mock") {
+    console.warn("[registry] Using MockSMSProvider (SMS_MODE=mock — simulated delivery)");
+    return new MockSMSProvider();
+  }
+
   if (
     process.env.TWILIO_ACCOUNT_SID &&
     process.env.TWILIO_AUTH_TOKEN &&
@@ -89,12 +99,30 @@ function buildNotificationProvider(): NotificationProvider {
     console.info("[registry] Using TwilioSMSProvider");
     return new TwilioSMSProvider();
   }
-  if (process.env.NODE_ENV === "development") {
-    console.warn("[registry] Using MockSMSProvider (development only — simulated delivery)");
-    return new MockSMSProvider();
-  }
-  console.warn("[registry] No SMS provider configured — safety alerts will fail explicitly");
+
+  console.error(
+    "[registry] SMS_MODE=real but Twilio credentials are incomplete — " +
+      "safety alerts will fail explicitly",
+  );
   return new UnavailableSMSProvider();
+}
+
+export type SmsMode = "real" | "mock";
+
+/**
+ * Resolve SMS delivery mode with a safe default.
+ *
+ * "simulated" is accepted as a friendly alias for "mock", but "mock" is the
+ * canonical configuration value documented for the project.
+ */
+export function resolveSmsMode(rawMode = process.env.SMS_MODE): SmsMode {
+  const mode = rawMode?.trim().toLowerCase();
+  if (mode === "real") return "real";
+  if (mode === "mock" || mode === "simulated") return "mock";
+  if (mode) {
+    console.warn(`[registry] Unknown SMS_MODE="${mode}" — defaulting to mock`);
+  }
+  return "mock";
 }
 
 export const speechProvider: SpeechProvider = buildSpeechProvider();

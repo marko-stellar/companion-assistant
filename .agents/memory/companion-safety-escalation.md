@@ -17,3 +17,18 @@ description: Durable policy rules for the conversational safety alert system.
 - Any at-most-once side effect here must be enforced in the database (atomic conditional claim), not with in-memory guards.
 - Ambiguous provider outcomes (timeout/network loss after the request may have been accepted) and stale in-flight sends must NEVER be auto-retried — a duplicate real alert is worse than a visible failure. Mark them failed with a "verify manually" message instead.
 - On code paths that carried user speech, never log provider/classifier error messages (they can echo the utterance) — log error names/ids only.
+
+## Explicit SMS delivery mode
+
+`SMS_MODE` defaults to `mock`; live Twilio delivery requires an explicit
+`SMS_MODE=real` plus all three Twilio credentials. Simulated is accepted as an
+alias for mock. Never fall back from explicitly requested real delivery to
+simulation when configuration is incomplete.
+
+**Why:** adding or rotating valid Twilio credentials must not silently change a
+demo or staging environment into one that sends family safety alerts.
+
+**How to apply:** leave `SMS_MODE=mock` for demonstrations and non-production
+testing; set `SMS_MODE=real` deliberately in the target environment only after
+confirming the sender number and emergency contacts. An incomplete real setup
+must surface a visible failed status.

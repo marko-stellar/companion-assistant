@@ -76,7 +76,8 @@ See `.env.example` for the full annotated list. Required at startup:
 | `SESSION_SECRET` | Min 32-char secret for session signing |
 | `OPENAI_API_KEY` | LLM + STT + TTS (server-side only, never browser) |
 | `SEARCH_API_KEY` | Brave Search or equivalent |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Emergency SMS only |
+| `SMS_MODE` | `mock` by default; set to `real` for explicit live SMS |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER` | Emergency SMS only |
 
 ---
 

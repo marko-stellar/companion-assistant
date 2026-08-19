@@ -117,11 +117,19 @@ lib/
 - **Migrations only** — `lib/db/migrations/`, no destructive resets after dev begins.
 - **Reserved VM deployment** — always-on API for persistent connections and background scheduling.
 
-### Health Check
+### Health & Readiness
 
 ```
-GET /api/healthz  →  { "status": "ok" }
+GET /api/healthz  →  { "status": "ok" }                       (liveness)
+GET /api/readyz   →  { "status": "ready", "checks": { ... } } (readiness: DB + object storage; 503 when not ready)
 ```
+
+### Evaluator / Operations Docs
+
+- `docs/demo-script.md` — step-by-step evaluator demo (9 flows, fictional seeded data)
+- `docs/croatian-voice-benchmark.md` — 30-utterance Croatian speech benchmark
+- `docs/evaluator-acceptance.md` — pass/fail acceptance checklist
+- `docs/operations.md` — Reserved VM deployment, secrets, persistence, rollback
 
 ---
 

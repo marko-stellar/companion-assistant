@@ -51,3 +51,6 @@ CREATE INDEX IF NOT EXISTS IDX_admin_sessions_expire ON admin_sessions (expire);
 - No medical diagnosis; safety classification independent from response generation
 - No emergency SMS on routine deviation alone (MVP)
 - Overnight DND (e.g. 22:00–07:00): endTime < startTime means next-day crossing — scheduler must handle
+
+## Object storage readiness probe
+Replit sidecar GCS credentials grant only object-level permissions: `bucket.exists()` fails with `storage.buckets.get` denied. Probe availability with `bucket.getFiles({ prefix, maxResults: 1, autoPaginate: false })` instead, bounded by a timeout, returning boolean (never throwing) for /api/readyz.

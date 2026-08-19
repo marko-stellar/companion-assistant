@@ -41,6 +41,33 @@ export class ObjectNotFoundError extends Error {
 export class ObjectStorageService {
   constructor() {}
 
+  /**
+   * Bounded, non-destructive availability probe for readiness checks:
+   * verifies the private bucket actually answers (config alone is not
+   * enough). Never throws; returns false on any failure or timeout.
+   */
+  async checkAvailability(timeoutMs = 2000): Promise<boolean> {
+    try {
+      const dir = this.getPrivateObjectDir();
+      const { bucketName, objectName } = parseObjectPath(dir);
+      // Object-list (not bucket.get): the Replit sidecar credential only
+      // grants object-level permissions on the bucket.
+      const probe = objectStorageClient
+        .bucket(bucketName)
+        .getFiles({ prefix: objectName, maxResults: 1, autoPaginate: false })
+        .then(() => true);
+      const timeout = new Promise<boolean>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('object storage probe timed out')),
+          timeoutMs,
+        ).unref?.();
+      });
+      return await Promise.race([probe, timeout]);
+    } catch {
+      return false;
+    }
+  }
+
   getPublicObjectSearchPaths(): Array<string> {
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || '';
     const paths = Array.from(

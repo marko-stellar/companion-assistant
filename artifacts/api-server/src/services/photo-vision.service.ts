@@ -11,7 +11,7 @@
 import { eq } from "drizzle-orm";
 import { db, photos } from "@workspace/db";
 import type { Photo } from "@workspace/db";
-import { llmProvider } from "../providers/registry";
+import { visionProvider } from "../providers/registry";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 
@@ -50,24 +50,29 @@ export class PhotoVisionService {
   private async doAnalyze(photo: Photo): Promise<void> {
     if (!photo.objectKey) throw new Error("Photo has no objectKey");
 
-    // 1. Get signed read URL and download image bytes
-    const signedUrl = await objectStorageService.getObjectEntityReadURL(
-      photo.objectKey,
-      900, // 15 min — enough to download
-    );
+    let imageData = "";
+    if (visionProvider.requiresImageData) {
+      // Real vision providers receive bytes through a short-lived signed URL.
+      const signedUrl = await objectStorageService.getObjectEntityReadURL(
+        photo.objectKey,
+        900,
+      );
 
-    const imageRes = await fetch(signedUrl, { signal: AbortSignal.timeout(30_000) });
-    if (!imageRes.ok) {
-      throw new Error(`Failed to download photo (${imageRes.status})`);
+      const imageRes = await fetch(signedUrl, {
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!imageRes.ok) {
+        throw new Error(`Failed to download photo (${imageRes.status})`);
+      }
+
+      const buffer = Buffer.from(await imageRes.arrayBuffer());
+      const contentType = photo.contentType ?? "image/jpeg";
+      const base64 = buffer.toString("base64");
+      imageData = `data:${contentType};base64,${base64}`;
     }
 
-    const buffer = Buffer.from(await imageRes.arrayBuffer());
-    const contentType = photo.contentType ?? "image/jpeg";
-    const base64 = buffer.toString("base64");
-    const imageData = `data:${contentType};base64,${base64}`;
-
-    // 2. Run vision analysis
-    const result = await llmProvider.analyzeImage({
+    // Run real analysis or return a deterministic mock description.
+    const result = await visionProvider.analyzeImage({
       imageData,
       prompt: VISION_SYSTEM_PROMPT,
       language: "en",

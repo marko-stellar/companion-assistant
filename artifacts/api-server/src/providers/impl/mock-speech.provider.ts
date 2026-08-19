@@ -1,5 +1,5 @@
 /**
- * MockSpeechProvider — used when ELEVENLABS_API_KEY is not configured.
+ * MockSpeechProvider — selected explicitly by SPEECH_MODE=mock.
  *
  * Transcription: returns a canned greeting in the user's language so the
  * full voice flow (recording → uploading → playing) can be exercised locally.

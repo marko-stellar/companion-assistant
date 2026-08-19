@@ -1,5 +1,5 @@
 /**
- * MockLLMProvider — used when no LLM API key is configured.
+ * MockLLMProvider — selected explicitly by LLM_MODE=mock.
  *
  * Generates personality-aware, language-appropriate responses for all four
  * COMPANION personas (Ana, Mia, Luka, Ivan). Supports Croatian and English.

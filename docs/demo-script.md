@@ -48,17 +48,17 @@ seeded data. Total time ~15 minutes.
 
 ## Flow 7 — Current information (trusted sources)
 1. Admin: show Settings → News sources (allowlist).
-2. Ask a current-events question; note that in development a mock search
-   provider returns clearly labelled placeholder results — explain the
-   provider is swappable for production.
+2. Ask a current-events question; with `SEARCH_MODE=mock`, the provider returns
+   clearly labelled placeholder results — explain that real mode is currently
+   unavailable rather than fabricating live information.
 
 ## Flow 8 — Safety escalation (controlled)
 1. Say a scripted concerning phrase (e.g. „Pala sam i ne mogu ustati" — state
    clearly to the evaluator this is a scripted test).
 2. Tablet: companion responds with calm guidance.
-3. Admin → Safety tab: event appears; delivery shows **SIMULATED** in
-   development (mock SMS provider — no real message sent; honest labelling is
-   by design). Resolve the event.
+3. Admin → Safety tab: event appears; with `SMS_MODE=mock`, delivery shows
+   **SIMULATED** (no real message sent; honest labelling is by design). Resolve
+   the event.
 
 ## Flow 9 — Failure and recovery
 1. Turn off tablet Wi-Fi → offline overlay with recovery guidance appears.

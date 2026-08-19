@@ -4,13 +4,8 @@
  * Configuration is read from environment variables at startup.
  * No provider key ever reaches the browser.
  *
- * Speech provider selection:
- *   ELEVENLABS_API_KEY set  →  ElevenLabsSpeechProvider
- *   otherwise               →  MockSpeechProvider
- *
- * LLM provider selection:
- *   (future: OPENAI_API_KEY / ANTHROPIC_API_KEY)
- *   currently always         →  MockLLMProvider
+ * Every provider uses an explicit MODE=real|mock setting. Missing or invalid
+ * mode values safely resolve to mock. Real mode never falls back to mock.
  *
  * Companion voice IDs (override defaults via env vars):
  *   ELEVENLABS_VOICE_ANA   ELEVENLABS_VOICE_MIA
@@ -21,56 +16,85 @@ import type { SpeechProvider } from "./speech.provider";
 import type { LLMProvider } from "./llm.provider";
 import type { SearchProvider } from "./search.provider";
 import type { NotificationProvider } from "./notification.provider";
+import type { VisionProvider } from "./vision.provider";
+import type { WakeWordProvider } from "./wake-word.provider";
+import {
+  missingConfig,
+  readConfig,
+  resolveProviderMode,
+  type ProviderMode,
+} from "./provider-config";
 import { ElevenLabsSpeechProvider } from "./impl/elevenlabs-speech.provider";
 import { MockSpeechProvider } from "./impl/mock-speech.provider";
+import { UnavailableSpeechProvider } from "./impl/unavailable-speech.provider";
 import { MockLLMProvider } from "./impl/mock-llm.provider";
+import { UnavailableLLMProvider } from "./impl/unavailable-llm.provider";
 import { MockSearchProvider } from "./impl/mock-search.provider";
 import { UnavailableSearchProvider } from "./impl/unavailable-search.provider";
 import { TwilioSMSProvider } from "./impl/twilio-sms.provider";
 import { MockSMSProvider } from "./impl/mock-sms.provider";
 import { UnavailableSMSProvider } from "./impl/unavailable-sms.provider";
+import { MockVisionProvider } from "./impl/mock-vision.provider";
+import { UnavailableVisionProvider } from "./impl/unavailable-vision.provider";
+import {
+  NoOpWakeWordProvider,
+  UnavailableWakeWordProvider,
+} from "./wake-word.provider";
 
 // ── Voice ID table ──────────────────────────────────────────────────────────
 // Default IDs are ElevenLabs pre-made voices (multilingual-capable).
 // Values are public voice IDs visible to anyone with the ElevenLabs API.
 export const COMPANION_VOICE_IDS: Record<string, string> = {
-  Ana:  process.env.ELEVENLABS_VOICE_ANA  ?? "21m00Tcm4TlvDq8ikWAM", // Rachel  — warm female
-  Mia:  process.env.ELEVENLABS_VOICE_MIA  ?? "AZnzlk1XvdvUeBnXmlld", // Domi    — energetic female
-  Luka: process.env.ELEVENLABS_VOICE_LUKA ?? "ErXwobaYiN019PkySvjV", // Antoni  — calm male
-  Ivan: process.env.ELEVENLABS_VOICE_IVAN ?? "TxGEqnHWrfWFTfGW9XjX", // Josh    — friendly male
+  Ana:  readConfig("ELEVENLABS_VOICE_ANA")  ?? "21m00Tcm4TlvDq8ikWAM", // Rachel  — warm female
+  Mia:  readConfig("ELEVENLABS_VOICE_MIA")  ?? "AZnzlk1XvdvUeBnXmlld", // Domi    — energetic female
+  Luka: readConfig("ELEVENLABS_VOICE_LUKA") ?? "ErXwobaYiN019PkySvjV", // Antoni  — calm male
+  Ivan: readConfig("ELEVENLABS_VOICE_IVAN") ?? "TxGEqnHWrfWFTfGW9XjX", // Josh    — friendly male
 };
 
 // ── Speech provider ─────────────────────────────────────────────────────────
 function buildSpeechProvider(): SpeechProvider {
-  if (process.env.ELEVENLABS_API_KEY) {
-    console.info("[registry] Using ElevenLabsSpeechProvider");
+  if (resolveProviderMode("SPEECH_MODE") === "mock") {
+    console.warn("[registry] Using MockSpeechProvider (SPEECH_MODE=mock — canned audio)");
+    return new MockSpeechProvider();
+  }
+
+  const missing = missingConfig(["ELEVENLABS_API_KEY"]);
+  if (missing.length === 0) {
+    console.info("[registry] Using ElevenLabsSpeechProvider (SPEECH_MODE=real)");
     return new ElevenLabsSpeechProvider();
   }
-  console.warn("[registry] ELEVENLABS_API_KEY not set — using MockSpeechProvider");
-  return new MockSpeechProvider();
+
+  console.error(
+    `[registry] SPEECH_MODE=real but required configuration is missing: ${missing.join(", ")}`,
+  );
+  return new UnavailableSpeechProvider(
+    `SPEECH_MODE=real requires ${missing.join(", ")}`,
+  );
 }
 
 // ── LLM provider ────────────────────────────────────────────────────────────
 function buildLLMProvider(): LLMProvider {
-  // TODO: check OPENAI_API_KEY / ANTHROPIC_API_KEY when implemented
-  console.warn("[registry] No LLM API key configured — using MockLLMProvider");
-  return new MockLLMProvider();
+  if (resolveProviderMode("LLM_MODE") === "mock") {
+    console.warn("[registry] Using MockLLMProvider (LLM_MODE=mock — canned responses)");
+    return new MockLLMProvider();
+  }
+
+  console.error(
+    "[registry] LLM_MODE=real but no supported real LLM adapter is implemented",
+  );
+  return new UnavailableLLMProvider();
 }
 
 // ── Search provider ─────────────────────────────────────────────────────────
-// Selection:
-//   SEARCH_PROVIDER=mock (or development env) → MockSearchProvider
-//   otherwise → UnavailableSearchProvider (fails explicitly; the companion
-//   tells the user honestly that it cannot look things up right now).
 function buildSearchProvider(): SearchProvider {
-  // Mock search is DEVELOPMENT-ONLY: its results are clearly labelled
-  // placeholders. In production (or any non-development env) search fails
-  // explicitly so the companion answers honestly instead of fabricating news.
-  if (process.env.NODE_ENV === "development") {
-    console.warn("[registry] Using MockSearchProvider (development only — placeholder results)");
+  if (resolveProviderMode("SEARCH_MODE") === "mock") {
+    console.warn("[registry] Using MockSearchProvider (SEARCH_MODE=mock — placeholder results)");
     return new MockSearchProvider();
   }
-  console.warn("[registry] No search provider configured — search will fail explicitly");
+
+  console.error(
+    "[registry] SEARCH_MODE=real but no supported real search adapter is implemented",
+  );
   return new UnavailableSearchProvider();
 }
 
@@ -91,23 +115,49 @@ function buildNotificationProvider(): NotificationProvider {
     return new MockSMSProvider();
   }
 
-  if (
-    process.env.TWILIO_ACCOUNT_SID &&
-    process.env.TWILIO_AUTH_TOKEN &&
-    process.env.TWILIO_PHONE_NUMBER
-  ) {
-    console.info("[registry] Using TwilioSMSProvider");
+  const missing = missingConfig([
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_PHONE_NUMBER",
+  ]);
+  if (missing.length === 0) {
+    console.info("[registry] Using TwilioSMSProvider (SMS_MODE=real)");
     return new TwilioSMSProvider();
   }
 
   console.error(
-    "[registry] SMS_MODE=real but Twilio credentials are incomplete — " +
-      "safety alerts will fail explicitly",
+    `[registry] SMS_MODE=real but required configuration is missing: ${missing.join(", ")}`,
   );
   return new UnavailableSMSProvider();
 }
 
-export type SmsMode = "real" | "mock";
+// ── Vision provider ─────────────────────────────────────────────────────────
+function buildVisionProvider(): VisionProvider {
+  if (resolveProviderMode("VISION_MODE") === "mock") {
+    console.warn("[registry] Using MockVisionProvider (VISION_MODE=mock — canned description)");
+    return new MockVisionProvider();
+  }
+
+  console.error(
+    "[registry] VISION_MODE=real but no supported real vision adapter is implemented",
+  );
+  return new UnavailableVisionProvider();
+}
+
+// ── Wake-word provider ──────────────────────────────────────────────────────
+function buildWakeWordProvider(): WakeWordProvider {
+  if (resolveProviderMode("WAKE_WORD_MODE") === "mock") {
+    console.warn("[registry] Using NoOpWakeWordProvider (WAKE_WORD_MODE=mock)");
+    return new NoOpWakeWordProvider();
+  }
+
+  console.error(
+    "[registry] WAKE_WORD_MODE=real but no supported wake-word adapter is implemented",
+  );
+  return new UnavailableWakeWordProvider();
+}
+
+export type SmsMode = ProviderMode;
 
 /**
  * Resolve SMS delivery mode with a safe default.
@@ -116,16 +166,12 @@ export type SmsMode = "real" | "mock";
  * canonical configuration value documented for the project.
  */
 export function resolveSmsMode(rawMode = process.env.SMS_MODE): SmsMode {
-  const mode = rawMode?.trim().toLowerCase();
-  if (mode === "real") return "real";
-  if (mode === "mock" || mode === "simulated") return "mock";
-  if (mode) {
-    console.warn(`[registry] Unknown SMS_MODE="${mode}" — defaulting to mock`);
-  }
-  return "mock";
+  return resolveProviderMode("SMS_MODE", rawMode);
 }
 
 export const speechProvider: SpeechProvider = buildSpeechProvider();
 export const llmProvider: LLMProvider = buildLLMProvider();
 export const searchProvider: SearchProvider = buildSearchProvider();
 export const notificationProvider: NotificationProvider = buildNotificationProvider();
+export const visionProvider: VisionProvider = buildVisionProvider();
+export const wakeWordProvider: WakeWordProvider = buildWakeWordProvider();

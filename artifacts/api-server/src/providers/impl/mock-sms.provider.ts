@@ -1,9 +1,10 @@
 /**
- * MockSMSProvider — DEVELOPMENT-ONLY SMS provider.
+ * MockSMSProvider — selected explicitly by SMS_MODE=mock.
  *
  * Simulates successful delivery so the full safety-escalation pipeline
  * (classify → persist → escalate → record delivery) can be exercised
- * without a real SMS credential. Never selected in production.
+ * without a real SMS credential. Safe in any environment because results are
+ * persistently labelled SIMULATED.
  *
  * Privacy: logs only the redacted destination and message length —
  * never the message content (which contains conversation evidence).

@@ -16,25 +16,36 @@ so reminders, safety recovery, and routine inference keep running.
 
 ## Required secrets / environment
 
-| Variable | Purpose | Required in prod |
-|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection | yes (set by Replit DB) |
-| `SESSION_SECRET` | admin session signing | yes |
-| `ELEVENLABS_API_KEY` | STT + TTS | yes |
-| `PRIVATE_OBJECT_DIR` | object storage private dir | yes |
-| `PUBLIC_OBJECT_SEARCH_PATHS` | object storage public paths | yes |
-| `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | object storage bucket | yes |
-| `OPENAI_API_KEY` | embeddings for memory retrieval | recommended (keyword fallback otherwise) |
-| `SMS_MODE` | `mock` (default) or explicit `real` delivery | yes — use `real` only intentionally |
-| SMS provider keys (Twilio) | real safety SMS | yes for real escalation — see mock note below |
-| Search provider key | current-info retrieval | optional — see mock note below |
+Always required:
 
-**Provider status (MVP):** conversations currently always use `MockLLMProvider`
-(a real LLM provider is not yet wired into the registry). Mock search and mock
-SMS activate when `SMS_MODE` is `mock` (the safe default). Real SMS activates
-only when `SMS_MODE=real` and all Twilio secrets are configured. If
-`SMS_MODE=real` is selected with incomplete credentials, SMS fails explicitly
-instead of silently switching to simulation.
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection (set by Replit DB) |
+| `SESSION_SECRET` | Admin session signing |
+| `PRIVATE_OBJECT_DIR` | Object Storage private directory |
+| `PUBLIC_OBJECT_SEARCH_PATHS` | Object Storage public paths |
+| `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | Object Storage bucket |
+
+Provider mode matrix:
+
+| Mode variable | `mock` behavior | `real` requirements and behavior |
+|---|---|---|
+| `SPEECH_MODE` | Canned transcript + silent WAV; no ElevenLabs call | `ELEVENLABS_API_KEY`; optional STT/TTS model and voice IDs |
+| `SMS_MODE` | Persists `SIMULATED`; sends no message | All three Twilio settings; incomplete config is explicitly unavailable |
+| `EMBEDDING_MODE` | No embedding call; memory retrieval uses keywords | `OPENAI_API_KEY`; API errors are surfaced, not converted to mock success |
+| `LLM_MODE` | Deterministic conversation, tools, extraction, and safety | Unsupported in the current MVP; explicitly unavailable |
+| `SEARCH_MODE` | Clearly labelled placeholder results | Unsupported in the current MVP; explicitly unavailable |
+| `VISION_MODE` | Canned safe description; photo bytes are not downloaded | Unsupported in the current MVP; explicitly unavailable |
+| `WAKE_WORD_MODE` | No-op detector | Unsupported in the current MVP; explicitly unavailable |
+
+Optional provider-name values (`LLM_PROVIDER`, `SEARCH_PROVIDER`,
+`VISION_PROVIDER`, `WAKE_WORD_PROVIDER`) are reserved for future real adapters.
+Blank optional values are treated as unset. Replit Object Storage and
+PostgreSQL remain real-only persistence dependencies and do not have mock modes.
+
+Mode parsing is fail-safe: only the literal value `real` enables a real
+integration. Empty or invalid modes select mock. Once real is selected, missing
+configuration or runtime API errors never silently switch back to mock.
 
 The API logs at startup which providers are real vs. mock — check those lines
 after every deploy. Do not demo with mock providers while claiming real
@@ -76,12 +87,12 @@ delivery; the UI labels mock SMS as SIMULATED by design.
 - Record the known-good version (deploy timestamp + git checkpoint) in the
   acceptance report after each successful evaluator run.
 
-## Known development-mode behaviours
+## Known provider-mode behaviours
 
-- `MockLLMProvider` is currently always used (see provider status above).
-- `MockSearchProvider` activates only when `NODE_ENV=development`.
-- `MockSMSProvider` activates when `SMS_MODE=mock` (including production);
-  simulated delivery is surfaced as SIMULATED in the admin UI. `SMS_MODE=real`
-  requires all Twilio secrets and never falls back to mock delivery.
-- `NoOpEmbeddingProvider` (keyword-fallback memory retrieval) activates when
-  `OPENAI_API_KEY` is absent. Each selection is logged at startup.
+- Modes are independent: for example, speech can be real while SMS remains
+  simulated and search remains placeholder-only.
+- Mock selection is identical in development and production; it is controlled
+  by the mode variables, not `NODE_ENV`.
+- `SIMULATED` SMS and `[Mock result ...]` search labels are intentional honesty
+  signals and must not be hidden for demonstrations.
+- Each selected mode is logged at startup. No credential value is logged.

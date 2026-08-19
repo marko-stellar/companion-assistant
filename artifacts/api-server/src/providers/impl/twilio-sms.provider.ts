@@ -14,6 +14,7 @@ import type {
   SendSMSParams,
   SendSMSResult,
 } from "../notification.provider";
+import { readConfig } from "../provider-config";
 
 export class TwilioSMSProvider implements NotificationProvider {
   private readonly accountSid: string;
@@ -21,9 +22,9 @@ export class TwilioSMSProvider implements NotificationProvider {
   private readonly fromNumber: string;
 
   constructor() {
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_PHONE_NUMBER;
+    const sid = readConfig("TWILIO_ACCOUNT_SID");
+    const token = readConfig("TWILIO_AUTH_TOKEN");
+    const from = readConfig("TWILIO_PHONE_NUMBER");
     if (!sid || !token || !from) {
       throw new Error(
         "TwilioSMSProvider requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER",

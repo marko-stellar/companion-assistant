@@ -1,5 +1,5 @@
 /**
- * MockSearchProvider — deterministic development stand-in for a real search
+ * MockSearchProvider — deterministic stand-in for a real search
  * API. Used so the full retrieval pipeline (allowlisting, bounding, prompt
  * injection, honest failures) can be exercised without a search credential.
  *

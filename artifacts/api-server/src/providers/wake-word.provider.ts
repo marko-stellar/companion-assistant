@@ -38,3 +38,21 @@ export class NoOpWakeWordProvider implements WakeWordProvider {
     return false;
   }
 }
+
+/**
+ * Explicit real-mode failure. This is intentionally different from the no-op
+ * mock so a requested real integration is never silently simulated.
+ */
+export class UnavailableWakeWordProvider implements WakeWordProvider {
+  start(_onWakeWord: (event: WakeWordEvent) => void): () => void {
+    throw new Error(
+      "WAKE_WORD_MODE=real is selected, but no real wake-word provider is implemented",
+    );
+  }
+
+  stop(): void {}
+
+  isSupported(): boolean {
+    return false;
+  }
+}

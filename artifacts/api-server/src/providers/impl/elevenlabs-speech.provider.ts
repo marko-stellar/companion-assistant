@@ -17,6 +17,7 @@ import type {
   SynthesizeParams,
   SynthesizeResult,
 } from "../speech.provider";
+import { readConfig } from "../provider-config";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
 
@@ -32,11 +33,11 @@ export class ElevenLabsSpeechProvider implements SpeechProvider {
   private readonly ttsModel: string;
 
   constructor() {
-    const key = process.env.ELEVENLABS_API_KEY;
+    const key = readConfig("ELEVENLABS_API_KEY");
     if (!key) throw new Error("ELEVENLABS_API_KEY is required for ElevenLabsSpeechProvider");
     this.apiKey = key;
-    this.sttModel = process.env.ELEVENLABS_STT_MODEL ?? "scribe_v1";
-    this.ttsModel = process.env.ELEVENLABS_TTS_MODEL ?? "eleven_multilingual_v2";
+    this.sttModel = readConfig("ELEVENLABS_STT_MODEL") ?? "scribe_v1";
+    this.ttsModel = readConfig("ELEVENLABS_TTS_MODEL") ?? "eleven_multilingual_v2";
   }
 
   async transcribe({

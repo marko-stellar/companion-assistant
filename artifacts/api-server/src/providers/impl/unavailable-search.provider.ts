@@ -1,6 +1,6 @@
 /**
- * UnavailableSearchProvider — explicit-failure provider used when no search
- * capability or credential is configured. Every call throws
+ * UnavailableSearchProvider — explicit-failure provider used when real search
+ * is requested but no supported adapter is configured. Every call throws
  * SearchUnavailableError so callers can respond honestly instead of
  * silently returning fabricated or empty results.
  */

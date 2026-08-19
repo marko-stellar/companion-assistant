@@ -67,17 +67,23 @@ pnpm run typecheck
 
 ## Environment Variables
 
-See `.env.example` for the full annotated list. Required at startup:
+See `.env.example` for the full annotated list. Every optional integration has
+an explicit `real` or `mock` mode; missing, blank, or invalid mode values safely
+select mock, while real mode never silently falls back.
 
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string (auto-injected on Replit) |
 | `PORT` | API server port (auto-injected on Replit) |
 | `SESSION_SECRET` | Min 32-char secret for session signing |
-| `OPENAI_API_KEY` | LLM + STT + TTS (server-side only, never browser) |
-| `SEARCH_API_KEY` | Brave Search or equivalent |
-| `SMS_MODE` | `mock` by default; set to `real` for explicit live SMS |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER` | Emergency SMS only |
+| `SPEECH_MODE` | `mock` by default; `real` requires `ELEVENLABS_API_KEY` |
+| `SMS_MODE` | `mock` by default; `real` requires all Twilio settings |
+| `EMBEDDING_MODE` | `mock` keyword retrieval; `real` requires `OPENAI_API_KEY` |
+| `LLM_MODE` / `SEARCH_MODE` / `VISION_MODE` / `WAKE_WORD_MODE` | Explicit mock controls; real adapters are not yet implemented and fail visibly |
+| `PRIVATE_OBJECT_DIR` / `PUBLIC_OBJECT_SEARCH_PATHS` / `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | Replit Object Storage (real-only persistence) |
+
+Startup logs identify every selected provider mode without printing
+credentials. See `docs/operations.md` for the full mode matrix.
 
 ---
 

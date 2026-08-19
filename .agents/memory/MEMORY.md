@@ -10,3 +10,4 @@
 - [COMPANION routine awareness](companion-routine-awareness.md) — rule-based inference (3 types), 6-h inference cadence, deviation check-in via tablet poll, admin RoutinesTab, activity events from executor/scheduler/conversation.
 - [COMPANION safety escalation](companion-safety-escalation.md) — separate classifySafety LLM call, DB-atomic SMS claim (PENDING→SENDING), visible FAILED status, content-free logging.
 - [COMPANION photo memories](companion-photo-memories.md) — two-step presigned upload, ObjectStorageService.getObjectEntityReadURL(), show_photo tool with ownership check, identity safety rule in 3 places, lib/db tsc --build required after schema changes.
+- [COMPANION provider modes](companion-provider-modes.md) — integrations default to network-free mock; real mode is explicit and never silently falls back.

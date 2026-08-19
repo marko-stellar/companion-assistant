@@ -17,6 +17,10 @@ import { requireUuidParam } from "../../middlewares/validateParam";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import { photosService } from "../../domains/photos";
 import { photoVisionService } from "../../services/photo-vision.service";
+import {
+  HeicConversionError,
+  heicConversionService,
+} from "../../services/heic-conversion.service";
 
 const router = Router();
 const objectStorageService = new ObjectStorageService();
@@ -77,19 +81,41 @@ router.post(
       return;
     }
 
+    let normalizedPhoto;
+    try {
+      normalizedPhoto = await heicConversionService.convertIfNeeded({
+        objectPath,
+        contentType,
+        filename,
+        sizeBytes: typeof sizeBytes === "number" ? sizeBytes : null,
+      });
+    } catch (error) {
+      if (error instanceof HeicConversionError) {
+        req.log.warn({ userId, filename }, "HEIC photo conversion failed");
+        res.status(422).json({
+          error: "This HEIC image could not be converted. Please export it as JPEG and try again.",
+        });
+        return;
+      }
+      throw error;
+    }
+
     const photo = await photosService.create({
       userId,
       objectKey: objectPath,
-      contentType: contentType ?? null,
-      filename: filename ?? null,
+      contentType: normalizedPhoto.contentType,
+      filename: normalizedPhoto.filename,
       title: title ?? null,
       approxDate: approxDate ?? null,
       location: location ?? null,
       notes: notes ?? null,
-      sizeBytes: typeof sizeBytes === "number" ? sizeBytes : null,
+      sizeBytes: normalizedPhoto.sizeBytes,
     });
 
-    req.log.info({ userId, photoId: photo.id }, "Photo registered");
+    req.log.info(
+      { userId, photoId: photo.id, convertedFromHeic: normalizedPhoto.converted },
+      "Photo registered",
+    );
 
     // Trigger async vision analysis — never blocks the response
     void photoVisionService.analyzeAndStore(photo);

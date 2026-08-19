@@ -118,6 +118,21 @@ const EMPTY_FORM: UploadFormState = {
   notes: "",
 };
 
+const HEIC_FILENAME = /\.(heic|heif)$/i;
+
+function isHeicFile(file: File): boolean {
+  return file.type === "image/heic" || file.type === "image/heif" || HEIC_FILENAME.test(file.name);
+}
+
+function isPhotoFile(file: File): boolean {
+  return file.type.startsWith("image/") || isHeicFile(file);
+}
+
+function uploadContentType(file: File): string {
+  if (file.type) return file.type;
+  return isHeicFile(file) ? "image/heic" : "image/jpeg";
+}
+
 function UploadPanel({
   userId,
   onSuccess,
@@ -133,6 +148,10 @@ function UploadPanel({
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
+    if (f && !isPhotoFile(f)) {
+      setError("Please choose an image file.");
+      return;
+    }
     setForm(prev => ({ ...prev, file: f }));
     setDone(false);
     setError(null);
@@ -141,7 +160,7 @@ function UploadPanel({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
-    if (f && f.type.startsWith("image/")) {
+    if (f && isPhotoFile(f)) {
       setForm(prev => ({ ...prev, file: f }));
       setDone(false);
       setError(null);
@@ -157,13 +176,15 @@ function UploadPanel({
     setDone(false);
 
     try {
+      const contentType = uploadContentType(form.file);
+
       // Step 1: get presigned PUT URL
       const { uploadURL, objectPath } = await getUploadUrl();
 
       // Step 2: PUT file directly to GCS
       const putRes = await fetch(uploadURL, {
         method: "PUT",
-        headers: { "Content-Type": form.file.type || "image/jpeg" },
+        headers: { "Content-Type": contentType },
         body: form.file,
       });
       if (!putRes.ok) throw new Error(`Upload to storage failed (${putRes.status})`);
@@ -171,7 +192,7 @@ function UploadPanel({
       // Step 3: register metadata
       await registerPhoto(userId, {
         objectPath,
-        contentType: form.file.type || "image/jpeg",
+        contentType,
         filename: form.file.name,
         title: form.title.trim() || undefined,
         approxDate: form.approxDate.trim() || undefined,
@@ -214,7 +235,7 @@ function UploadPanel({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               className="sr-only"
               onChange={handleFile}
             />
@@ -231,7 +252,14 @@ function UploadPanel({
                 <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
                 <div className="text-center">
                   <p className="text-sm font-medium">Drop an image here or click to browse</p>
-                  <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, WEBP — up to 20 MB</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    JPEG, PNG, WEBP, HEIC, HEIF — up to 20 MB
+                  </p>
+                  {form.file && isHeicFile(form.file) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      iPhone format detected — it will be converted to JPEG for display.
+                    </p>
+                  )}
                 </div>
               </>
             )}

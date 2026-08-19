@@ -40,6 +40,10 @@ import type {
   ListAdminRemindersParams,
   ListAdminUsersParams,
   MessageResponse,
+  NewsSourceCreateInput,
+  NewsSourceList,
+  NewsSourceResponse,
+  NewsSourceUpdateInput,
   OccurrenceRespondRequest,
   OccurrencesResponse,
   OkResponse,
@@ -2489,5 +2493,296 @@ export const useRespondToOccurrence = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getRespondToOccurrenceMutationOptions(options));
+    }
+
+export const getGetAdminNewsSourcesUrl = () => {
+
+
+
+
+  return `/api/admin/news-sources`
+}
+
+/**
+ * @summary List trusted news sources
+ */
+export const getAdminNewsSources = async ( options?: RequestInit): Promise<NewsSourceList> => {
+
+  return customFetch<NewsSourceList>(getGetAdminNewsSourcesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminNewsSourcesQueryKey = () => {
+    return [
+    `/api/admin/news-sources`
+    ] as const;
+    }
+
+
+export const getGetAdminNewsSourcesQueryOptions = <TData = Awaited<ReturnType<typeof getAdminNewsSources>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminNewsSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminNewsSourcesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminNewsSources>>> = ({ signal }) => getAdminNewsSources({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminNewsSources>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminNewsSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminNewsSources>>>
+export type GetAdminNewsSourcesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List trusted news sources
+ */
+
+export function useGetAdminNewsSources<TData = Awaited<ReturnType<typeof getAdminNewsSources>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminNewsSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminNewsSourcesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminNewsSourceUrl = () => {
+
+
+
+
+  return `/api/admin/news-sources`
+}
+
+/**
+ * @summary Create a trusted news source
+ */
+export const createAdminNewsSource = async (newsSourceCreateInput: NewsSourceCreateInput, options?: RequestInit): Promise<NewsSourceResponse> => {
+
+  return customFetch<NewsSourceResponse>(getCreateAdminNewsSourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(newsSourceCreateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminNewsSourceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminNewsSource>>, TError,{data: BodyType<NewsSourceCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminNewsSource>>, TError,{data: BodyType<NewsSourceCreateInput>}, TContext> => {
+
+const mutationKey = ['createAdminNewsSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminNewsSource>>, {data: BodyType<NewsSourceCreateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminNewsSource(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminNewsSourceMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminNewsSource>>>
+    export type CreateAdminNewsSourceMutationBody = BodyType<NewsSourceCreateInput>
+    export type CreateAdminNewsSourceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a trusted news source
+ */
+export const useCreateAdminNewsSource = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminNewsSource>>, TError,{data: BodyType<NewsSourceCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminNewsSource>>,
+        TError,
+        {data: BodyType<NewsSourceCreateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminNewsSourceMutationOptions(options));
+    }
+
+export const getUpdateAdminNewsSourceUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/news-sources/${id}`
+}
+
+/**
+ * @summary Update or enable/disable a trusted news source
+ */
+export const updateAdminNewsSource = async (id: string,
+    newsSourceUpdateInput: NewsSourceUpdateInput, options?: RequestInit): Promise<NewsSourceResponse> => {
+
+  return customFetch<NewsSourceResponse>(getUpdateAdminNewsSourceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(newsSourceUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminNewsSourceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminNewsSource>>, TError,{id: string;data: BodyType<NewsSourceUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminNewsSource>>, TError,{id: string;data: BodyType<NewsSourceUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateAdminNewsSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminNewsSource>>, {id: string;data: BodyType<NewsSourceUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAdminNewsSource(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminNewsSourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminNewsSource>>>
+    export type UpdateAdminNewsSourceMutationBody = BodyType<NewsSourceUpdateInput>
+    export type UpdateAdminNewsSourceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update or enable/disable a trusted news source
+ */
+export const useUpdateAdminNewsSource = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminNewsSource>>, TError,{id: string;data: BodyType<NewsSourceUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminNewsSource>>,
+        TError,
+        {id: string;data: BodyType<NewsSourceUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminNewsSourceMutationOptions(options));
+    }
+
+export const getDeleteAdminNewsSourceUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/news-sources/${id}`
+}
+
+/**
+ * @summary Delete a trusted news source
+ */
+export const deleteAdminNewsSource = async (id: string, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getDeleteAdminNewsSourceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminNewsSourceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminNewsSource>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminNewsSource>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteAdminNewsSource'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminNewsSource>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAdminNewsSource(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminNewsSourceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminNewsSource>>>
+
+    export type DeleteAdminNewsSourceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a trusted news source
+ */
+export const useDeleteAdminNewsSource = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminNewsSource>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminNewsSource>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminNewsSourceMutationOptions(options));
     }
 

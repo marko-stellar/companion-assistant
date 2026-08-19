@@ -836,11 +836,127 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ── Trusted news sources ───────────────────────────────────────────────────
+  /admin/news-sources:
+    get:
+      operationId: getAdminNewsSources
+      tags: [newsSources]
+      summary: List trusted news sources
+      security:
+        - adminSession: []
+      responses:
+        "200":
+          description: All news sources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsSourceList"
+    post:
+      operationId: createAdminNewsSource
+      tags: [newsSources]
+      summary: Create a trusted news source
+      security:
+        - adminSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewsSourceCreateInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsSourceResponse"
+        "400":
+          description: Invalid input (missing name or invalid URL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/news-sources/{id}:
+    patch:
+      operationId: updateAdminNewsSource
+      tags: [newsSources]
+      summary: Update or enable/disable a trusted news source
+      security:
+        - adminSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewsSourceUpdateInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewsSourceResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: News source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAdminNewsSource
+      tags: [newsSources]
+      summary: Delete a trusted news source
+      security:
+        - adminSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "400":
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: News source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Admin session cookie set by POST /admin/auth/login
   schemas:
     # ── Common ───────────────────────────────────────────────────────────────
     HealthStatus:
@@ -1483,6 +1599,92 @@ components:
         reminderMinutesBefore:
           type: integer
           description: "The configured reminder window (minutes)"
+
+    # ── Trusted news sources ─────────────────────────────────────────────────
+    NewsSource:
+      type: object
+      required: [id, name, language, isActive, trustScore]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        language:
+          type: string
+        isActive:
+          type: boolean
+        trustScore:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    NewsSourceList:
+      type: object
+      required: [sources, total]
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/NewsSource"
+        total:
+          type: integer
+
+    NewsSourceResponse:
+      type: object
+      required: [source]
+      properties:
+        source:
+          $ref: "#/components/schemas/NewsSource"
+
+    NewsSourceCreateInput:
+      type: object
+      required: [name, url]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          minLength: 1
+          description: "Base website URL of the outlet (e.g. https://www.bbc.com). Its domain becomes the allowlist entry."
+        category:
+          type: string
+        language:
+          type: string
+          enum: [en, hr]
+        isActive:
+          type: boolean
+        trustScore:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    NewsSourceUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          minLength: 1
+        category:
+          type: ["string", "null"]
+        language:
+          type: string
+          enum: [en, hr]
+        isActive:
+          type: boolean
+        trustScore:
+          type: integer
+          minimum: 1
+          maximum: 10
 
     OccurrenceRespondRequest:
       type: object

@@ -211,6 +211,31 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       },
     },
   },
+  {
+    name: "search_current_info",
+    description:
+      "Retrieve CURRENT information from the internet: today's news headlines (mode 'news', restricted to trusted sources chosen by the family) " +
+      "or a general fact lookup (mode 'web'). Use this when the user asks about news, current events, weather, or facts you cannot know from memory. " +
+      "The result contains only headlines/snippets with their source and date — summarize them in 1–3 spoken sentences and ALWAYS mention the source. " +
+      "Present retrieved information as current news from that source — NEVER as something you personally remember about the user. " +
+      "If the search fails or returns nothing, say so honestly; never invent headlines or facts.",
+    parameters: {
+      type: "object",
+      required: ["mode", "query"],
+      additionalProperties: false,
+      properties: {
+        mode: {
+          type: "string",
+          enum: ["news", "web"],
+          description: "'news' for current events/headlines from trusted sources; 'web' for general fact lookups.",
+        },
+        query: {
+          type: "string",
+          description: "What the user wants to know, as a short search query (max 200 chars).",
+        },
+      },
+    },
+  },
 ];
 
 /** Build the tool section injected into the system prompt. */

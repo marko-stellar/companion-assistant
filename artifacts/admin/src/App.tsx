@@ -8,6 +8,7 @@ import { Dashboard } from '@/pages/dashboard';
 import { UsersList } from '@/pages/users';
 import { NewUser } from '@/pages/users/new';
 import { UserDetail } from '@/pages/users/detail';
+import { NewsSourcesPage } from '@/pages/settings/news-sources';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/users" component={UsersList} />
               <Route path="/users/new" component={NewUser} />
               <Route path="/users/:id" component={UserDetail} />
+              <Route path="/news-sources" component={NewsSourcesPage} />
               
               <Route path="/">
                 <Redirect to="/dashboard" />

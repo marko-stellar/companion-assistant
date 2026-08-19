@@ -757,3 +757,104 @@ export const RespondToOccurrenceResponse = zod.object({
 })
 
 
+/**
+ * @summary List trusted news sources
+ */
+export const GetAdminNewsSourcesResponse = zod.object({
+  "sources": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "isActive": zod.boolean(),
+  "trustScore": zod.number(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Create a trusted news source
+ */
+
+
+export const createAdminNewsSourceBodyTrustScoreMax = 10;
+
+
+
+export const CreateAdminNewsSourceBody = zod.object({
+  "name": zod.string().min(1),
+  "url": zod.string().min(1).describe('Base website URL of the outlet (e.g. https:\/\/www.bbc.com). Its domain becomes the allowlist entry.'),
+  "category": zod.string().optional(),
+  "language": zod.enum(['en', 'hr']).optional(),
+  "isActive": zod.boolean().optional(),
+  "trustScore": zod.number().min(1).max(createAdminNewsSourceBodyTrustScoreMax).optional()
+})
+
+export const CreateAdminNewsSourceResponse = zod.object({
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "isActive": zod.boolean(),
+  "trustScore": zod.number(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Update or enable/disable a trusted news source
+ */
+export const UpdateAdminNewsSourceParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+export const updateAdminNewsSourceBodyTrustScoreMax = 10;
+
+
+
+export const UpdateAdminNewsSourceBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "url": zod.string().min(1).optional(),
+  "category": zod.string().nullish(),
+  "language": zod.enum(['en', 'hr']).optional(),
+  "isActive": zod.boolean().optional(),
+  "trustScore": zod.number().min(1).max(updateAdminNewsSourceBodyTrustScoreMax).optional()
+})
+
+export const UpdateAdminNewsSourceResponse = zod.object({
+  "source": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "url": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "language": zod.string(),
+  "isActive": zod.boolean(),
+  "trustScore": zod.number(),
+  "createdAt": zod.string().optional(),
+  "updatedAt": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Delete a trusted news source
+ */
+export const DeleteAdminNewsSourceParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminNewsSourceResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+

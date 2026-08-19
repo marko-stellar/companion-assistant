@@ -452,6 +452,79 @@ export interface AppointmentAlert {
   reminderMinutesBefore: number;
 }
 
+export interface NewsSource {
+  id: string;
+  name: string;
+  /** @nullable */
+  url?: string | null;
+  /** @nullable */
+  category?: string | null;
+  language: string;
+  isActive: boolean;
+  trustScore: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NewsSourceList {
+  sources: NewsSource[];
+  total: number;
+}
+
+export interface NewsSourceResponse {
+  source: NewsSource;
+}
+
+export type NewsSourceCreateInputLanguage = typeof NewsSourceCreateInputLanguage[keyof typeof NewsSourceCreateInputLanguage];
+
+
+export const NewsSourceCreateInputLanguage = {
+  en: 'en',
+  hr: 'hr',
+} as const;
+
+export interface NewsSourceCreateInput {
+  /** @minLength 1 */
+  name: string;
+  /**
+     * Base website URL of the outlet (e.g. https://www.bbc.com). Its domain becomes the allowlist entry.
+     * @minLength 1
+     */
+  url: string;
+  category?: string;
+  language?: NewsSourceCreateInputLanguage;
+  isActive?: boolean;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  trustScore?: number;
+}
+
+export type NewsSourceUpdateInputLanguage = typeof NewsSourceUpdateInputLanguage[keyof typeof NewsSourceUpdateInputLanguage];
+
+
+export const NewsSourceUpdateInputLanguage = {
+  en: 'en',
+  hr: 'hr',
+} as const;
+
+export interface NewsSourceUpdateInput {
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 1 */
+  url?: string;
+  /** @nullable */
+  category?: string | null;
+  language?: NewsSourceUpdateInputLanguage;
+  isActive?: boolean;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  trustScore?: number;
+}
+
 export type OccurrenceRespondRequestResponse = typeof OccurrenceRespondRequestResponse[keyof typeof OccurrenceRespondRequestResponse];
 
 

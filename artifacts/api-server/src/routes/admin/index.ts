@@ -9,6 +9,7 @@ import remindersRouter from "./reminders";
 import appointmentsRouter from "./appointments";
 import routinesRouter from "./routines";
 import photosRouter from "./photos";
+import newsSourcesRouter from "./news-sources";
 
 /**
  * Admin API route group — /api/admin/*
@@ -32,5 +33,6 @@ router.use(remindersRouter);
 router.use(appointmentsRouter);
 router.use(routinesRouter);
 router.use(photosRouter);
+router.use(newsSourcesRouter);
 
 export default router;

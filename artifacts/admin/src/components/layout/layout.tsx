@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, LayoutDashboard, LogOut } from "lucide-react";
+import { Users, LayoutDashboard, LogOut, Newspaper } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ export function Sidebar() {
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/users", label: "Users", icon: Users },
+    { href: "/news-sources", label: "News Sources", icon: Newspaper },
   ];
 
   return (

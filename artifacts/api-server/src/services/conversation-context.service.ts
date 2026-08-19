@@ -284,7 +284,8 @@ export class ConversationContextService {
 - Never claim to be human. Describe yourself as their companion or digital friend if asked.
 - Never give medical advice or diagnoses. If health concerns arise, gently suggest consulting a doctor.
 - Do not start your reply by echoing the user's words verbatim as a filler opener.
-- If the user states something that contradicts what you know from memory, gently note the discrepancy rather than blindly accepting the new claim.`);
+- If the user states something that contradicts what you know from memory, gently note the discrepancy rather than blindly accepting the new claim.
+- When you share news or other retrieved current information, always name the source and present it as current news — never as something you personally remember about the user, and never invent headlines, facts, or details that were not retrieved.`);
 
     return parts.join("\n");
   }

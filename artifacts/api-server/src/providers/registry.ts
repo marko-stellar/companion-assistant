@@ -19,9 +19,12 @@
 
 import type { SpeechProvider } from "./speech.provider";
 import type { LLMProvider } from "./llm.provider";
+import type { SearchProvider } from "./search.provider";
 import { ElevenLabsSpeechProvider } from "./impl/elevenlabs-speech.provider";
 import { MockSpeechProvider } from "./impl/mock-speech.provider";
 import { MockLLMProvider } from "./impl/mock-llm.provider";
+import { MockSearchProvider } from "./impl/mock-search.provider";
+import { UnavailableSearchProvider } from "./impl/unavailable-search.provider";
 
 // ── Voice ID table ──────────────────────────────────────────────────────────
 // Default IDs are ElevenLabs pre-made voices (multilingual-capable).
@@ -50,5 +53,23 @@ function buildLLMProvider(): LLMProvider {
   return new MockLLMProvider();
 }
 
+// ── Search provider ─────────────────────────────────────────────────────────
+// Selection:
+//   SEARCH_PROVIDER=mock (or development env) → MockSearchProvider
+//   otherwise → UnavailableSearchProvider (fails explicitly; the companion
+//   tells the user honestly that it cannot look things up right now).
+function buildSearchProvider(): SearchProvider {
+  // Mock search is DEVELOPMENT-ONLY: its results are clearly labelled
+  // placeholders. In production (or any non-development env) search fails
+  // explicitly so the companion answers honestly instead of fabricating news.
+  if (process.env.NODE_ENV === "development") {
+    console.warn("[registry] Using MockSearchProvider (development only — placeholder results)");
+    return new MockSearchProvider();
+  }
+  console.warn("[registry] No search provider configured — search will fail explicitly");
+  return new UnavailableSearchProvider();
+}
+
 export const speechProvider: SpeechProvider = buildSpeechProvider();
 export const llmProvider: LLMProvider = buildLLMProvider();
+export const searchProvider: SearchProvider = buildSearchProvider();

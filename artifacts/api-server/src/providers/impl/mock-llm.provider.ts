@@ -260,6 +260,15 @@ function detectToolCall(userText: string, systemPrompt: string, timezone: string
     return { tool: "correct_memory", args: { subject, correctedFact: userText } };
   }
 
+  // search_current_info — news keywords
+  if (/\b(news|vijesti|headline|naslovnic|what.s\s+(happening|going\s+on)|što\s+se\s+događa|novosti)\b/i.test(t)) {
+    return { tool: "search_current_info", args: { mode: "news", query: userText.trim().slice(0, 200) } };
+  }
+  // search_current_info — general lookup keywords
+  if (/\b(look\s+up|search\s+for|potraži|pretraži|google)\b/i.test(t)) {
+    return { tool: "search_current_info", args: { mode: "web", query: userText.trim().slice(0, 200) } };
+  }
+
   // show_photo — look for photoId in AVAILABLE PHOTOS section of system prompt
   if (/\b(pokaži|prikaži|show|display|bring\s+up|can\s+i\s+see|mogu\s+li\s+vidjeti).*?(photo|fotografij|sliku|slik)/i.test(t) ||
       /\b(photo|fotografij|slik).*?\b(pokaži|prikaži|show|display)\b/i.test(t)) {
@@ -278,6 +287,20 @@ export class MockLLMProvider implements LLMProvider {
   async respond({ messages, language }: LLMRespondParams): Promise<LLMRespondResult> {
     await new Promise(r => setTimeout(r, 600));
     const systemPrompt = messages.find(m => m.role === "system")?.content ?? "";
+
+    // Tool confirmation turn — deterministically speak the tool outcome so
+    // success summaries and honest failure explanations actually reach the
+    // user in mock mode (a real LLM would paraphrase these).
+    const lastAssistant = messages.filter(m => m.role === "assistant").at(-1)?.content ?? "";
+    const successMatch = /^\[Tool \S+ succeeded\. Confirm naturally: "([\s\S]*)"\]$/.exec(lastAssistant);
+    if (successMatch) {
+      return { content: successMatch[1]! };
+    }
+    const failureMatch = /^\[Tool \S+ failed: "([\s\S]*)"\. Apologise briefly and explain\.\]$/.exec(lastAssistant);
+    if (failureMatch) {
+      return { content: `I'm sorry — ${failureMatch[1]!}` };
+    }
+
     const companion = detectCompanionName(systemPrompt);
     const isHR = language === "hr";
     return { content: pickResponse(companion, isHR) };

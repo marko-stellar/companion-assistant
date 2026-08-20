@@ -28,13 +28,16 @@ five-layer bloom uses three non-harmonic breathing cycles and a slow 28°–44°
 golden hue drift. The approved listening treatment is the brighter five-layer
 bloom with three staggered, outward-expanding amber rings. The approved
 Speaking treatment is the response state: its glow uses a slow deep breath,
-an 18-second warmth drift, and a subtle shimmer rather than audio waves.
+an 18-second warmth drift, and a subtle shimmer rather than audio waves. The
+thinking state follows the approved conversation treatment: a slower warm
+breath with a gentle attention flicker between idle and speaking.
 
 **Why:** The creator explicitly selected the canvas animations as the exact
-production treatments for normal, listening, and responding states.
+production treatments for normal, thinking, listening, and responding states.
 
 **How to apply:** Map the animations directly to the existing state machine:
-idle → Home Screen bloom, recording → Listening bloom and rings, playback →
-Speaking bloom. Preserve their cadence, colors, layer sizes, and status-text
-entrances; do not substitute the legacy orb or audio-waveform treatment for
-these three states. Upload/thinking, DND, and offline remain separate states.
+idle → Home Screen bloom, uploading/thinking → warm conversation bloom,
+recording → Listening bloom and rings, playback → Speaking bloom. Preserve
+their cadence, colors, layer sizes, and status-text entrances; do not
+substitute the legacy purple orb or audio-waveform treatment for these states.
+DND and offline remain separate states.

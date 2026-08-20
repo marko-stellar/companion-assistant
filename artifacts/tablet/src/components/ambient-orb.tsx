@@ -309,6 +309,91 @@ function SpeakingAmbientLight({ size }: { size: number }) {
   );
 }
 
+// ── Approved thinking animation ───────────────────────────────────────────────
+// Adapted from the approved ConvoDark treatment: warm, attentive, and slower
+// than listening so "Razmišljam…" feels engaged without reading as speech.
+
+function ThinkingAmbientLight({ size }: { size: number }) {
+  const [t, setT] = useState(0);
+  const scale = size / 240;
+
+  useEffect(() => {
+    let raf = 0;
+    let t0: number | null = null;
+
+    const tick = (ts: number) => {
+      if (!t0) t0 = ts;
+      setT((ts - t0) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Long breath, shorter attention flicker, and very slow warmth drift.
+  const breath = (Math.sin(t * 0.5) + 1) / 2;
+  const attend = (Math.sin(t * 1.1 + 0.4) + 1) / 2;
+  const warmth = (Math.sin(t * 0.22 + 1.2) + 1) / 2;
+  const hue = 28 + warmth * 14;
+  const saturation = 80 + breath * 10;
+
+  return (
+    <ApprovedAmbientStage width={400} height={400} scale={scale}>
+      <div
+        style={approvedBlobStyle(
+          380 + breath * 36,
+          360 + breath * 32,
+          `hsl(${hue - 10}, ${saturation - 22}%, 22%)`,
+          0.3 + breath * 0.12,
+          72,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          248 + breath * 28,
+          234 + breath * 22,
+          `hsl(${hue - 4}, ${saturation - 12}%, 40%)`,
+          0.44 + breath * 0.18,
+          44,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          148 + breath * 22 + attend * 6,
+          140 + breath * 18 + attend * 5,
+          `hsl(${hue + 2}, ${saturation}%, 60%)`,
+          0.76 + breath * 0.16,
+          24,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          64 + breath * 12 + attend * 8,
+          60 + breath * 10 + attend * 6,
+          `hsl(${hue + 6}, ${saturation + 4}%, 76%)`,
+          0.72 + breath * 0.18 + attend * 0.08,
+          10,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          18 + breath * 5,
+          16 + breath * 4,
+          "#fffdf8",
+          0.68 + breath * 0.26,
+          3,
+          scale,
+        )}
+      />
+    </ApprovedAmbientStage>
+  );
+}
+
 // ── Approved listening animation ─────────────────────────────────────────────
 // Faithful responsive port of the selected ListenDark mockup.
 
@@ -525,7 +610,10 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
   const stateRef = useRef<CompanionState>(state);
   const rotationRef = useRef(0);
   const usesApprovedLight =
-    state === "idle" || state === "listening" || state === "speaking";
+    state === "idle" ||
+    state === "thinking" ||
+    state === "listening" ||
+    state === "speaking";
 
   // Update state ref without restarting the loop
   useEffect(() => {
@@ -712,6 +800,7 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
         }}
       />
       {state === "idle" && <IdleAmbientLight size={size} />}
+      {state === "thinking" && <ThinkingAmbientLight size={size} />}
       {state === "listening" && <ListeningAmbientLight size={size} />}
       {state === "speaking" && <SpeakingAmbientLight size={size} />}
     </div>

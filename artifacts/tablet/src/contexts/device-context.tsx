@@ -70,7 +70,7 @@ interface DeviceContextValue {
   t: Strings;
   greeting: string;
   /** Called after a successful setup code entry — reloads context. */
-  onSetupComplete: () => void;
+  onSetupComplete: () => Promise<void>;
   /**
    * Start a new recording turn (or stop the current one / barge into playback).
    * idle     → start recording (request mic permission)
@@ -367,22 +367,21 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
 
   const clearVoiceError = useCallback(() => setVoiceError(null), []);
 
-  const onSetupComplete = useCallback(() => {
-    let cancelled = false;
-    (async () => {
+  const onSetupComplete = useCallback(async () => {
+    try {
       const result = await fetchDeviceContext();
-      if (cancelled || !result) return;
+      if (!result) throw new Error("Device context could not be loaded");
       setCtx(result);
       setAppState("home");
       const todayData = await fetchTodayItems();
-      if (!cancelled) {
-        setTodayItems(todayData.items);
-        setUpcomingAlerts(todayData.upcomingAlerts ?? []);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setTodayItems(todayData.items);
+      setUpcomingAlerts(todayData.upcomingAlerts ?? []);
+    } catch (error) {
+      clearToken();
+      setCtx(null);
+      setAppState("setup");
+      throw error;
+    }
   }, []);
 
   const respondToItem = useCallback(

@@ -31,7 +31,7 @@ export function setAuthTokenGetter(getter: () => string | null) {
 }
 
 function getToken(): string | null {
-  return authTokenGetter ? authTokenGetter() : null;
+  return authTokenGetter ? authTokenGetter() : getStoredToken();
 }
 
 function authHeaders(): HeadersInit {
@@ -79,7 +79,8 @@ export function clearToken(): void {
  * Actual auth state is checked by reading getStoredToken() directly.
  */
 export function initDeviceAuth(): void {
-  // Token is persisted in localStorage; nothing to initialise asynchronously.
+  // Keep all authenticated API helpers connected to the persisted session.
+  setAuthTokenGetter(getStoredToken);
 }
 
 /**

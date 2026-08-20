@@ -3,7 +3,7 @@ import { setupDevice } from "@/lib/device-api";
 import { getStrings } from "@/lib/i18n";
 
 interface SetupPageProps {
-  onComplete: () => void;
+  onComplete: () => void | Promise<void>;
 }
 
 export function SetupPage({ onComplete }: SetupPageProps) {
@@ -23,7 +23,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
 
     try {
       await setupDevice(trimmed);
-      onComplete();
+      await onComplete();
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Setup failed";

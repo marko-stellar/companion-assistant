@@ -14,3 +14,4 @@
 - [COMPANION photo memories](companion-photo-memories.md) — two-step presigned upload, ObjectStorageService.getObjectEntityReadURL(), show_photo tool with ownership check, identity safety rule in 3 places, lib/db tsc --build required after schema changes.
 - [HEIC photo normalization](photo-heic-normalization.md) — iPhone HEIC/HEIF uploads are converted server-side to a display-safe JPEG before registration.
 - [COMPANION provider modes](companion-provider-modes.md) — integrations default to network-free mock; real mode is explicit and never silently falls back.
+- [COMPANION language authority](companion-language-authority.md) — saved user language is authoritative over STT’s detected variants in conversation and mocks.

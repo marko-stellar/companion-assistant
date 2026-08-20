@@ -26,6 +26,7 @@ import type {
   AnalyzeImageResult,
   SafetyCategory,
 } from "../llm.provider";
+import { normalizeCompanionLanguage } from "../../lib/language";
 
 // ── Response banks ──────────────────────────────────────────────────────────
 
@@ -123,6 +124,24 @@ function pickResponse(companion: string, isHR: boolean): string {
 function detectCompanionName(systemPrompt: string): string {
   const names = Object.keys(RESPONSES);
   return names.find(n => systemPrompt.includes(`You are ${n}`)) ?? "Ana";
+}
+
+const CROATIAN_TOOL_CONFIRMATIONS: Record<string, string> = {
+  create_reminder: "U redu, podsjetnik je spremljen.",
+  create_appointment: "U redu, termin je spremljen.",
+  set_temporary_dnd: "U redu, uključila sam mirni način rada do dogovorenog vremena.",
+  get_today_schedule: "Provjerila sam vaš raspored za danas.",
+  confirm_medication: "U redu, zabilježila sam vaš odgovor.",
+  correct_memory: "U redu, spremila sam ispravljenu informaciju.",
+  show_photo: "U redu, pokazujem fotografiju.",
+  search_current_info: "U redu, pronašla sam najnovije informacije.",
+};
+
+function localizedToolConfirmation(toolName: string, language: string | undefined): string {
+  if (normalizeCompanionLanguage(language) !== "hr") {
+    return "";
+  }
+  return CROATIAN_TOOL_CONFIRMATIONS[toolName] ?? "U redu, to je spremljeno.";
 }
 
 // ── Mock tool-call detection ─────────────────────────────────────────────────
@@ -293,17 +312,27 @@ export class MockLLMProvider implements LLMProvider {
     // success summaries and honest failure explanations actually reach the
     // user in mock mode (a real LLM would paraphrase these).
     const lastAssistant = messages.filter(m => m.role === "assistant").at(-1)?.content ?? "";
-    const successMatch = /^\[Tool \S+ succeeded\. Confirm naturally: "([\s\S]*)"\]$/.exec(lastAssistant);
+    const successMatch = /^\[Tool (\S+) succeeded\. Confirm naturally: "([\s\S]*)"\]$/.exec(lastAssistant);
     if (successMatch) {
-      return { content: successMatch[1]! };
+      return {
+        content:
+          localizedToolConfirmation(successMatch[1]!, language) ||
+          successMatch[2]!,
+      };
     }
     const failureMatch = /^\[Tool \S+ failed: "([\s\S]*)"\. Apologise briefly and explain\.\]$/.exec(lastAssistant);
     if (failureMatch) {
+      if (normalizeCompanionLanguage(language) === "hr") {
+        return {
+          content:
+            "Žao mi je, to trenutno nisam mogla napraviti. Pokušajmo ponovno.",
+        };
+      }
       return { content: `I'm sorry — ${failureMatch[1]!}` };
     }
 
     const companion = detectCompanionName(systemPrompt);
-    const isHR = language === "hr";
+    const isHR = normalizeCompanionLanguage(language) === "hr";
     return { content: pickResponse(companion, isHR) };
   }
 
@@ -329,7 +358,7 @@ export class MockLLMProvider implements LLMProvider {
 
     // No tool needed — return conversational text
     const companion = detectCompanionName(systemPrompt);
-    const isHR = language === "hr";
+    const isHR = normalizeCompanionLanguage(language) === "hr";
     return { type: "text", content: pickResponse(companion, isHR) };
   }
 

@@ -17,6 +17,7 @@ import type {
   SynthesizeParams,
   SynthesizeResult,
 } from "../speech.provider";
+import { normalizeCompanionLanguage } from "../../lib/language";
 import { readConfig } from "../provider-config";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
@@ -55,7 +56,7 @@ export class ElevenLabsSpeechProvider implements SpeechProvider {
     );
     // Croatian IANA code understood by Scribe
     if (language) {
-      form.append("language_code", language === "hr" ? "hr" : "en");
+      form.append("language_code", normalizeCompanionLanguage(language));
     }
 
     const res = await fetch(`${ELEVENLABS_BASE}/speech-to-text`, {

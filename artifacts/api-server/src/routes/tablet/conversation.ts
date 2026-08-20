@@ -43,6 +43,7 @@ import { buildToolsPromptSection } from "../../tools/definitions";
 import { activityEventService } from "../../services/activity-event.service";
 import { routineService } from "../../domains/routine";
 import { safetyService, type SafetyTurnOutcome } from "../../domains/safety";
+import { normalizeCompanionLanguage } from "../../lib/language";
 
 const router = Router();
 
@@ -84,7 +85,10 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
   }
 
   const { user, companion } = row;
-  const language = user.language ?? "en";
+  // The user’s saved language setting is authoritative for the companion’s
+  // reply. Speech-to-text detection can return variants such as "hrv", but it
+  // must not unexpectedly change the language the user chose in Admin.
+  const language = normalizeCompanionLanguage(user.language);
   const timezone = user.timezone ?? "UTC";
 
   // ── 2. Decode audio ───────────────────────────────────────────────────────
@@ -99,7 +103,6 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
   // ── 3. Transcribe (STT) ───────────────────────────────────────────────────
   const sttStart = Date.now();
   let transcript: string;
-  let detectedLanguage: string | undefined;
 
   try {
     const result = await speechProvider.transcribe({
@@ -108,7 +111,6 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
       language,
     });
     transcript = result.transcript.trim();
-    detectedLanguage = result.detectedLanguage;
   } catch (err) {
     req.log.error({ err }, "STT failed");
     res.status(500).json({ error: "Transcription failed. Please try again." });
@@ -122,7 +124,7 @@ router.post("/converse", requireDevice, async (req, res): Promise<void> => {
     return;
   }
 
-  const effectiveLang = detectedLanguage ?? language;
+  const effectiveLang = language;
 
   // ── 4. Get or create conversation session ─────────────────────────────────
   let convId = existingConvId;

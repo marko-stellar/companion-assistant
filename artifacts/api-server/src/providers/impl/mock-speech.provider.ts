@@ -15,6 +15,7 @@ import type {
   SynthesizeParams,
   SynthesizeResult,
 } from "../speech.provider";
+import { normalizeCompanionLanguage } from "../../lib/language";
 
 /** Generate a minimal valid PCM WAV with silence. */
 function silentWav(durationMs = 500): Buffer {
@@ -57,7 +58,7 @@ const CANNED_GREETINGS: Record<string, string[]> = {
 
 export class MockSpeechProvider implements SpeechProvider {
   async transcribe({ language }: TranscribeParams): Promise<TranscribeResult> {
-    const lang = language === "hr" ? "hr" : "en";
+    const lang = normalizeCompanionLanguage(language);
     const options = CANNED_GREETINGS[lang];
     const transcript = options[Math.floor(Math.random() * options.length)];
     return {

@@ -583,32 +583,10 @@ function StateLabel({
     <p
       className="text-base tracking-wide"
       style={{
-        color:
-          companionState === "listening"
-            ? "#d4c4a0"
-            : companionState === "thinking"
-              ? "#c4b490"
-            : companionState === "speaking"
-              ? "#ddd0b0"
-            : "rgba(200,225,245,0.75)",
+        color: "rgba(200,225,245,0.75)",
         fontStyle: "italic",
         fontFamily: "'Cormorant Garamond', Georgia, serif",
-        fontSize:
-          companionState === "listening" ||
-          companionState === "thinking" ||
-          companionState === "speaking"
-            ? "2.375rem"
-            : undefined,
-        marginTop:
-          companionState === "listening" || companionState === "thinking"
-            ? 28
-            : companionState === "speaking"
-              ? 36
-              : undefined,
-        animation:
-          companionState === "speaking"
-            ? "speakFadeUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) both"
-            : "textFadeIn 1.2s ease forwards",
+        animation: "textFadeIn 1.2s ease forwards",
       }}
     >
       {label}

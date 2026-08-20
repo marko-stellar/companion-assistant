@@ -48,7 +48,7 @@ export class ElevenLabsSpeechProvider implements SpeechProvider {
     const form = new FormData();
     form.append("model_id", this.sttModel);
     form.append(
-      "audio",
+      "file",
       // Wrap in Uint8Array to satisfy BlobPart type constraint on Buffer<ArrayBufferLike>
       new Blob([new Uint8Array(audioBuffer)], { type: mimeType }),
       "audio",

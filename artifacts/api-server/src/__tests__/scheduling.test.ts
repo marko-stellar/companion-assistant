@@ -43,7 +43,7 @@ afterAll(async () => {
 });
 
 describe("occurrence generation", () => {
-  it("generates ~7 days ahead and is idempotent on re-run", async () => {
+  it("materializes immediately and remains idempotent on scheduler re-runs", async () => {
     const rem = await remindersService.createReminder({
       userId,
       title: "Gen test",
@@ -51,7 +51,6 @@ describe("occurrence generation", () => {
       localTime: "23:59",
       recurrenceDays: [...ALL_DAYS],
     });
-    await scheduler.checkReminders(new Date());
     const first = await db
       .select()
       .from(reminderOccurrences)
@@ -102,7 +101,7 @@ describe("respond lifecycle", () => {
 });
 
 describe("schedule-edit reconciliation", () => {
-  it("wipes pending occurrences when localTime changes and on deactivation", async () => {
+  it("replaces pending occurrences immediately when localTime changes and removes them on deactivation", async () => {
     const rem = await remindersService.createReminder({
       userId,
       title: "Recon",
@@ -122,7 +121,7 @@ describe("schedule-edit reconciliation", () => {
       .select()
       .from(reminderOccurrences)
       .where(eq(reminderOccurrences.reminderId, rem.id));
-    expect(wiped.length).toBe(0);
+    expect(wiped.length).toBeGreaterThanOrEqual(7);
 
     await scheduler.checkReminders(new Date());
     await remindersService.deactivateReminder(rem.id);

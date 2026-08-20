@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db, users } from "@workspace/db";
 import {
   reminders,
   reminderOccurrences,
@@ -8,6 +8,8 @@ import {
   type InsertReminderOccurrence,
 } from "@workspace/db/schema";
 import { eq, and, lte, gt, isNull, isNotNull, asc } from "drizzle-orm";
+import { ianaZoneOrUtc } from "../../lib/local-time";
+import { computeUpcomingReminderOccurrences } from "../../services/reminder-occurrence-generation";
 
 /**
  * Reminders domain — manages GENERAL and MEDICATION reminders.
@@ -20,6 +22,7 @@ import { eq, and, lte, gt, isNull, isNotNull, asc } from "drizzle-orm";
 export class RemindersService {
   async createReminder(data: InsertReminder): Promise<Reminder> {
     const [reminder] = await db.insert(reminders).values(data).returning();
+    await this.materializeUpcomingOccurrences(reminder);
     return reminder;
   }
 
@@ -71,6 +74,9 @@ export class RemindersService {
 
     if (row && scheduleChanged) {
       await this.deletePendingOccurrences(id);
+      if (row.isActive) {
+        await this.materializeUpcomingOccurrences(row);
+      }
     }
     return row ?? null;
   }
@@ -100,6 +106,31 @@ export class RemindersService {
   /** All active reminders across users (scheduler generation pass). */
   async getAllActive(): Promise<Reminder[]> {
     return db.select().from(reminders).where(eq(reminders.isActive, true));
+  }
+
+  /**
+   * Populate a reminder's near-term occurrences as part of create/edit work.
+   * The scheduler repeats this idempotently on its next tick, but doing it here
+   * lets a newly saved reminder appear on an already-open tablet immediately.
+   */
+  private async materializeUpcomingOccurrences(
+    reminder: Reminder,
+    nowUtc = new Date(),
+  ): Promise<void> {
+    const [user] = await db
+      .select({ timezone: users.timezone })
+      .from(users)
+      .where(eq(users.id, reminder.userId))
+      .limit(1);
+
+    if (!user) return;
+
+    const occurrences = computeUpcomingReminderOccurrences(
+      reminder,
+      ianaZoneOrUtc(user.timezone),
+      nowUtc,
+    );
+    await this.upsertUpcomingOccurrences(reminder.id, occurrences);
   }
 
   /**

@@ -1,6 +1,6 @@
 import { eq, and, inArray, gt, lte } from "drizzle-orm";
 import { db, users, reminders, dndPeriods, temporaryDnd } from "@workspace/db";
-import type { Reminder, DndPeriod, Weekday } from "@workspace/db";
+import type { DndPeriod } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { remindersService } from "../domains/reminders";
 import { proactivityService } from "../domains/proactivity";
@@ -8,12 +8,9 @@ import { activityEventService } from "../services/activity-event.service";
 import { routineInferenceService } from "../services/routine-inference.service";
 import {
   ianaZoneOrUtc,
-  getLocalParts,
-  localToUtc,
   isInDndWindow,
 } from "../lib/local-time";
-
-const GENERATION_WINDOW_DAYS = 7;
+import { computeUpcomingReminderOccurrences } from "../services/reminder-occurrence-generation";
 
 /**
  * AppScheduler — in-process minute-tick scheduler.
@@ -119,7 +116,7 @@ export class AppScheduler {
       .where(eq(reminders.isActive, true));
 
     for (const { reminder, timezone } of rows) {
-      const occurrences = this.computeUpcomingOccurrences(
+      const occurrences = computeUpcomingReminderOccurrences(
         reminder,
         ianaZoneOrUtc(timezone),
         nowUtc,
@@ -131,38 +128,6 @@ export class AppScheduler {
         );
       }
     }
-  }
-
-  /** UTC instants of a reminder's occurrences within the next 7 days. */
-  computeUpcomingOccurrences(
-    reminder: Reminder,
-    timezone: string,
-    nowUtc: Date,
-  ): Date[] {
-    const out: Date[] = [];
-    const horizon = nowUtc.getTime() + GENERATION_WINDOW_DAYS * 86_400_000;
-    const recurrence = (reminder.recurrenceDays ?? []) as Weekday[];
-
-    for (let i = 0; i <= GENERATION_WINDOW_DAYS; i++) {
-      // Walk local calendar days starting today
-      const probe = new Date(nowUtc.getTime() + i * 86_400_000);
-      const p = getLocalParts(probe, timezone);
-
-      const matches =
-        recurrence.length > 0
-          ? recurrence.includes(p.weekday as Weekday)
-          : reminder.localDate === p.dateStr;
-      if (!matches) continue;
-
-      const utc = localToUtc(p.dateStr, reminder.localTime, timezone);
-      // Skip past instants (never re-create old occurrences) and cap horizon.
-      // A 10-minute grace window lets occurrences whose time just passed
-      // (e.g. reminder created moments after its localTime) still fire.
-      if (utc.getTime() < nowUtc.getTime() - 10 * 60_000) continue;
-      if (utc.getTime() > horizon) continue;
-      out.push(utc);
-    }
-    return out;
   }
 
   /**

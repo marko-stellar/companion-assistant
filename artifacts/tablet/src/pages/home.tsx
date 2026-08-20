@@ -495,7 +495,7 @@ function ScheduleTimeline({
               paddingTop: 13,
               paddingBottom: 13,
               position: "relative",
-              opacity: item.done ? 0.45 : status === "past" ? 0.75 : status === "future" ? 0.90 : 1,
+              opacity: item.done ? 0.50 : status === "past" ? 0.82 : status === "future" ? 0.95 : 1,
               transition: "opacity 0.4s ease",
               // Transform-only stagger entrance
               animation: `schedSlideIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) both`,
@@ -525,12 +525,12 @@ function ScheduleTimeline({
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontStyle: "italic",
                 fontWeight: 300,
-                fontSize: 18,
+                fontSize: 21,
                 letterSpacing: "0.06em",
-                color: "#ead3a3",
+                color: "#f6e7c8",
                 width: 56,
                 flexShrink: 0,
-                opacity: status === "now" ? 0.95 : 0.82,
+                opacity: status === "now" ? 1 : 0.92,
               }}
             >
               {item.time}
@@ -541,10 +541,10 @@ function ScheduleTimeline({
               style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontWeight: status === "now" ? 400 : 300,
-                fontSize: status === "now" ? 29 : status === "past" ? 24 : 27,
+                fontSize: status === "now" ? 34 : status === "past" ? 28 : 31,
                 letterSpacing: "0.01em",
                 lineHeight: 1.1,
-                color: status === "now" ? "#f4d4a0" : "#dfc49d",
+                color: status === "now" ? "#fff0c9" : "#f3dfbd",
                 flex: 1,
               }}
             >
@@ -1143,10 +1143,10 @@ export function HomePage() {
                   fontFamily: "'Cormorant Garamond', Georgia, serif",
                   fontWeight: 300,
                   fontStyle: "italic",
-                  fontSize: "1.25rem",
+                  fontSize: "1.5rem",
                   letterSpacing: "0.22em",
-                  color: "#ead3ad",
-                  opacity: 0.82,
+                  color: "#f6e7c8",
+                  opacity: 0.95,
                   margin: "0 0 8px 0",
                   textTransform: "lowercase",
                   // Slide in from side

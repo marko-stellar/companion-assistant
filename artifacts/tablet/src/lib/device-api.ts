@@ -2,8 +2,8 @@
  * device-api.ts — HTTP helpers for the tablet client.
  *
  * All requests include the Bearer auth token from localStorage.
- * The base URL is derived from import.meta.env.BASE_URL so the helper works
- * behind the Replit path-prefix proxy (e.g. /tablet/).
+ * The tablet is served beneath /tablet/, while the shared API artifact owns
+ * the global /api/ path. API calls must therefore stay root-relative.
  */
 
 import type {
@@ -24,8 +24,6 @@ export type AppointmentAlert = any;
 /** Response value for a medication occurrence confirmation. */
 export type OccurrenceRespondRequestResponse = "YES" | "NO" | "UNKNOWN";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, ""); // e.g. "/tablet"
-
 let authTokenGetter: (() => string | null) | null = null;
 
 export function setAuthTokenGetter(getter: () => string | null) {
@@ -42,7 +40,7 @@ function authHeaders(): HeadersInit {
 }
 
 async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     headers: { ...authHeaders() },
   });
   if (!res.ok) {
@@ -53,7 +51,7 @@ async function apiGet<T>(path: string): Promise<T> {
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
@@ -89,10 +87,10 @@ export function initDeviceAuth(): void {
  * On success, stores the auth token in localStorage.
  */
 export async function setupDevice(setupCode: string): Promise<void> {
-  const res = await fetch(`${BASE}/api/tablet/auth/setup`, {
+  const res = await fetch("/api/tablet/setup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ setupCode }),
+    body: JSON.stringify({ code: setupCode }),
   });
   if (!res.ok) {
     const json = await res.json().catch(() => null);
@@ -106,7 +104,7 @@ export async function setupDevice(setupCode: string): Promise<void> {
 // ── Context / today ───────────────────────────────────────────────────────────
 
 export async function fetchDeviceContext(): Promise<TabletContext> {
-  return apiGet<TabletContext>("/api/tablet/context");
+  return apiGet<TabletContext>("/api/tablet/me");
 }
 
 export async function fetchTodayItems(): Promise<{
@@ -121,7 +119,7 @@ export async function respondOccurrence(
   occurrenceId: string,
   response: OccurrenceRespondRequestResponse,
 ): Promise<void> {
-  await apiPost(`/api/tablet/reminders/${occurrenceId}/respond`, { response });
+  await apiPost(`/api/tablet/occurrences/${occurrenceId}/respond`, { response });
 }
 
 // ── Conversation ──────────────────────────────────────────────────────────────

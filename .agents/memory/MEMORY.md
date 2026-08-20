@@ -3,6 +3,7 @@
 - [COMPANION scheduling lessons](companion-scheduling.md) — wipe pending occurrences on schedule edits; local-day end = next local midnight (DST); migrations must live in the drizzle chain (pty workaround for generate).
 - [COMPANION codegen quirks](companion-codegen-quirks.md) — Orval appends to index.ts instead of overwriting; api-client-react must re-export custom-fetch.ts; api-zod must override index to only export generated/api.
 - [COMPANION device assignment](companion-device-assignment.md) — 6-char alphanumeric code (24h TTL), device_sessions with revokedAt, Bearer token in localStorage, tablet uses setAuthTokenGetter.
+- [COMPANION API artifact routing](companion-api-artifact-routing.md) — shared API stays at global `/api`; do not prefix it with `/tablet` or `/admin`.
 - [COMPANION voice loop](companion-voice-loop.md) — ElevenLabs STT+TTS (scribe_v1 / eleven_multilingual_v2), MockLLM, JSON base64 audio upload, VoicePhase state machine, voice ID env vars per companion.
 - [COMPANION TS workspace quirks](companion-ts-workspace-quirks.md) — rebuild lib/db with tsc --build after schema changes; cast Express 5 params to string for eq().
 - [COMPANION memory system](companion-memory-system.md) — extraction (LLM→JSON), pgvector retrieval with keyword fallback, voice correction audit trail, admin CRUD routes, drizzle-kit TTY migration workaround.

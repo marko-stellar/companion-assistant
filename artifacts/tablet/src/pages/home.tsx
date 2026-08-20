@@ -893,12 +893,12 @@ function CompanionNameLockup({
   name: string;
   size?: "sm" | "md";
 }) {
-  const ringSize = size === "sm" ? 32 : 36;
-  const innerSize = size === "sm" ? 10 : 12;
-  const fontSize = size === "sm" ? "1rem" : "1.2rem";
+  const ringSize = size === "sm" ? 40 : 48;
+  const innerSize = size === "sm" ? 12 : 16;
+  const fontSize = size === "sm" ? "1.35rem" : "1.55rem";
 
   return (
-    <div className="flex items-center" style={{ gap: size === "sm" ? 10 : 12 }}>
+    <div className="flex items-center" style={{ gap: size === "sm" ? 12 : 14 }}>
       {/* The mark — outer translucent ring + inner solid circle */}
       <div
         className="relative flex items-center justify-center flex-shrink-0"

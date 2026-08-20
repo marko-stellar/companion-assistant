@@ -586,12 +586,25 @@ function StateLabel({
         color:
           companionState === "listening"
             ? "#d4c4a0"
+            : companionState === "speaking"
+              ? "#ddd0b0"
             : "rgba(200,225,245,0.75)",
         fontStyle: "italic",
         fontFamily: "'Cormorant Garamond', Georgia, serif",
-        fontSize: companionState === "listening" ? "2.375rem" : undefined,
-        marginTop: companionState === "listening" ? 28 : undefined,
-        animation: "textFadeIn 1.2s ease forwards",
+        fontSize:
+          companionState === "listening" || companionState === "speaking"
+            ? "2.375rem"
+            : undefined,
+        marginTop:
+          companionState === "listening"
+            ? 28
+            : companionState === "speaking"
+              ? 36
+              : undefined,
+        animation:
+          companionState === "speaking"
+            ? "speakFadeUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) both"
+            : "textFadeIn 1.2s ease forwards",
       }}
     >
       {label}

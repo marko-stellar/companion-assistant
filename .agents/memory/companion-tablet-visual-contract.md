@@ -21,17 +21,20 @@ conversation), but never use visual time status to hide existing actions.
 Presentation may de-emphasize overdue items; unanswered medication
 confirmations must remain available in every responsive layout.
 
-## Confirmed listening mode
+## Confirmed ambient motion states
 
-The approved listening treatment is the warm five-layer ambient bloom with
-three staggered, outward-expanding amber rings. It replaces the orb visual
-only while the companion is actively listening; the other state visuals stay
-distinct.
+The approved Home Screen treatment is the normal idle state: its warm
+five-layer bloom uses three non-harmonic breathing cycles and a slow 28°–44°
+golden hue drift. The approved listening treatment is the brighter five-layer
+bloom with three staggered, outward-expanding amber rings. The approved
+Speaking treatment is the response state: its glow uses a slow deep breath,
+an 18-second warmth drift, and a subtle shimmer rather than audio waves.
 
-**Why:** The creator explicitly selected and approved this exact canvas
-animation for the production listening state.
+**Why:** The creator explicitly selected the canvas animations as the exact
+production treatments for normal, listening, and responding states.
 
-**How to apply:** Preserve its slow breathing cadence, hue drift, 6-second
-staggered rings, and restrained italic status copy. Connect it only to the
-existing recording/listening state, not to upload, playback, DND, or offline
-states.
+**How to apply:** Map the animations directly to the existing state machine:
+idle → Home Screen bloom, recording → Listening bloom and rings, playback →
+Speaking bloom. Preserve their cadence, colors, layer sizes, and status-text
+entrances; do not substitute the legacy orb or audio-waveform treatment for
+these three states. Upload/thinking, DND, and offline remain separate states.

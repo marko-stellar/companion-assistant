@@ -348,6 +348,12 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Approved speaking-text entrance (SpeakDark) */
+@keyframes speakFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Schedule item entrance — transform-only, opacity never hidden (schedSlideIn) */
 @keyframes schedSlideIn {
   from { transform: translateX(12px); }

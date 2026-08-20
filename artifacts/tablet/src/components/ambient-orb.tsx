@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { CompanionState } from "@/contexts/device-context";
 
 interface AmbientOrbProps {
@@ -75,10 +75,242 @@ const STATE_AMPS: Record<CompanionState, number> = {
   offline: 0.02,
 };
 
+function ApprovedAmbientStage({
+  width,
+  height,
+  scale,
+  children,
+}: {
+  width: number;
+  height: number;
+  scale: number;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        width: width * scale,
+        height: height * scale,
+        transform: "translate(-50%, -50%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "visible",
+        zIndex: 3,
+        pointerEvents: "none",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function approvedBlobStyle(
+  width: number,
+  height: number,
+  background: string,
+  opacity: number,
+  blur: number,
+  scale: number,
+  transform = "",
+) {
+  return {
+    position: "absolute" as const,
+    top: "50%",
+    left: "50%",
+    width: width * scale,
+    height: height * scale,
+    borderRadius: "50%",
+    background,
+    opacity,
+    filter: `blur(${blur * scale}px)`,
+    transform: `translate(-50%, -50%) ${transform}`,
+    transformOrigin: "center center",
+    willChange: "width, height, opacity, filter, transform",
+    pointerEvents: "none" as const,
+  };
+}
+
+// ── Approved idle animation ──────────────────────────────────────────────────
+// Faithful responsive port of the selected HomeScreen mockup. The size scaling
+// preserves the 400 × 380px stage at the portrait reference size (240px).
+
+function IdleAmbientLight({ size }: { size: number }) {
+  const [t, setT] = useState(0);
+  const scale = size / 240;
+
+  useEffect(() => {
+    let raf = 0;
+    let t0: number | null = null;
+
+    const tick = (ts: number) => {
+      if (!t0) t0 = ts;
+      setT((ts - t0) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Three non-harmonic breaths plus a slow warmth drift.
+  const A = (Math.sin(t * 0.38) + 1) / 2;
+  const B = (Math.sin(t * 0.23 + 1.1) + 1) / 2;
+  const C = (Math.sin(t * 0.59 + 2.3) + 1) / 2;
+  const D = (Math.sin(t * 0.14 + 0.8) + 1) / 2;
+  const hue = 28 + D * 16;
+
+  return (
+    <ApprovedAmbientStage width={400} height={380} scale={scale}>
+      <div
+        style={approvedBlobStyle(
+          340 + A * 40,
+          320 + B * 36,
+          `hsl(${hue - 10}, 70%, 28%)`,
+          0.28 + C * 0.12,
+          72,
+          scale,
+          `scale(${0.96 + B * 0.08})`,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          220 + B * 30,
+          210 + A * 28,
+          `hsl(${hue - 4}, 80%, 48%)`,
+          0.42 + A * 0.2,
+          48,
+          scale,
+          `scale(${0.92 + A * 0.12})`,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          130 + A * 24,
+          124 + B * 20,
+          `hsl(${hue + 2}, 88%, 68%)`,
+          0.72 + A * 0.22,
+          28,
+          scale,
+          `scale(${0.88 + A * 0.16})`,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          56 + A * 12,
+          54 + A * 10,
+          `hsl(${hue + 6}, 95%, 88%)`,
+          0.65 + A * 0.3,
+          10,
+          scale,
+          `scale(${0.84 + A * 0.18})`,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          18 + A * 6,
+          16 + A * 5,
+          "#fffdf8",
+          0.55 + A * 0.38,
+          4,
+          scale,
+          `scale(${0.8 + A * 0.22})`,
+        )}
+      />
+    </ApprovedAmbientStage>
+  );
+}
+
+// ── Approved speaking animation ──────────────────────────────────────────────
+// Faithful responsive port of SpeakDark. The companion responds through a
+// languid light exhale and warmth shift, not an audio-waveform metaphor.
+
+function SpeakingAmbientLight({ size }: { size: number }) {
+  const [t, setT] = useState(0);
+  const scale = size / 240;
+
+  useEffect(() => {
+    let raf = 0;
+    let t0: number | null = null;
+
+    const tick = (ts: number) => {
+      if (!t0) t0 = ts;
+      setT((ts - t0) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const breath = (Math.sin(t * 0.78) + 1) / 2;
+  const warmth = (Math.sin(t * 0.35 + 0.5) + 1) / 2;
+  const shimmer = (Math.sin(t * 2.1 + 1.2) + 1) / 2;
+  const hue = 26 + warmth * 18;
+  const saturation = 78 + breath * 14;
+
+  return (
+    <ApprovedAmbientStage width={400} height={400} scale={scale}>
+      <div
+        style={approvedBlobStyle(
+          360 + breath * 28 + shimmer * 4,
+          342 + breath * 24 + shimmer * 3,
+          `hsl(${hue - 10}, ${saturation - 16}%, 28%)`,
+          0.26 + breath * 0.1,
+          72,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          230 + breath * 22,
+          218 + breath * 18,
+          `hsl(${hue - 4}, ${saturation - 6}%, 50%)`,
+          0.44 + breath * 0.18,
+          44,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          140 + breath * 18 + shimmer * 3,
+          132 + breath * 14 + shimmer * 2,
+          `hsl(${hue + 2}, ${saturation}%, 66%)`,
+          0.76 + breath * 0.18,
+          24,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          58 + breath * 10,
+          54 + breath * 8,
+          `hsl(${hue + 8}, ${saturation + 4}%, 84%)`,
+          0.68 + breath * 0.24 + shimmer * 0.06,
+          10,
+          scale,
+        )}
+      />
+      <div
+        style={approvedBlobStyle(
+          18 + breath * 5,
+          16 + breath * 4,
+          "#fffdf8",
+          0.62 + breath * 0.3,
+          4,
+          scale,
+        )}
+      />
+    </ApprovedAmbientStage>
+  );
+}
+
 // ── Approved listening animation ─────────────────────────────────────────────
-// Ported from mockup-sandbox/src/components/mockups/companion/ListenDark.tsx.
-// This intentionally stays separate from the canvas orb so the other companion
-// states keep their existing visuals and behavior.
+// Faithful responsive port of the selected ListenDark mockup.
 
 function ListeningWaveRing({
   delay,
@@ -292,6 +524,8 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
   const layersRef = useRef<BlobLayer[]>([]);
   const stateRef = useRef<CompanionState>(state);
   const rotationRef = useRef(0);
+  const usesApprovedLight =
+    state === "idle" || state === "listening" || state === "speaking";
 
   // Update state ref without restarting the loop
   useEffect(() => {
@@ -299,6 +533,7 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
   }, [state]);
 
   useEffect(() => {
+    if (usesApprovedLight) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -420,7 +655,7 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
 
     rafRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [size]); // only re-init if size changes
+  }, [size, usesApprovedLight]); // re-init when the legacy canvas state is visible
 
   // Glow color derived from state — transitions smoothly via CSS transition
   const glowColor =
@@ -452,7 +687,7 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
           background: glowColor,
           filter: `blur(${Math.round(size * 0.22)}px)`,
           transition: "background 1.4s ease",
-          opacity: state === "listening" ? 0.7 : 1,
+          opacity: usesApprovedLight ? 0 : 1,
         }}
       />
       {/* Hairline ring — the vessel, like logo.css .logo-ring */}
@@ -461,7 +696,7 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
         style={{
           border: "1px solid rgba(74, 58, 34, 0.55)",
           transition: "border-color 1.2s ease",
-          opacity: state === "listening" ? 0 : 1,
+          opacity: usesApprovedLight ? 0 : 1,
           zIndex: 2,
         }}
       />
@@ -472,11 +707,13 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
           height: size,
           borderRadius: "50%",
           display: "block",
-          opacity: state === "listening" ? 0 : 1,
+          opacity: usesApprovedLight ? 0 : 1,
           transition: "opacity 0.35s ease",
         }}
       />
+      {state === "idle" && <IdleAmbientLight size={size} />}
       {state === "listening" && <ListeningAmbientLight size={size} />}
+      {state === "speaking" && <SpeakingAmbientLight size={size} />}
     </div>
   );
 }

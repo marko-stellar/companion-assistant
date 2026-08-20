@@ -75,7 +75,7 @@ function usePendingCheckIn() {
     acknowledgeCheckIn(checkIn.id).catch(() => {});
   };
 
-  return { checkIn: dismissed ? null : checkIn, dismiss };
+  return { checkIn: dismissed ? null : checkIn, dismiss: dismiss };
 }
 
 function CheckInBanner({
@@ -89,10 +89,11 @@ function CheckInBanner({
     <div
       role="status"
       aria-live="polite"
-      className="flex items-start gap-3 rounded-xl px-4 py-3"
+      className="flex items-start gap-3 rounded-2xl px-4 py-3"
       style={{
-        background: "rgba(80,130,200,0.12)",
-        border: "1px solid rgba(100,160,230,0.30)",
+        background: "rgba(80,130,200,0.10)",
+        border: "1px solid rgba(100,160,230,0.22)",
+        backdropFilter: "blur(8px)",
       }}
     >
       {/* Soft blue check-in icon */}
@@ -125,15 +126,16 @@ function CheckInBanner({
         onClick={onDismiss}
         aria-label="Dismiss"
         style={{
-          background: "rgba(100,160,230,0.18)",
-          border: "1px solid rgba(130,180,240,0.30)",
-          borderRadius: "8px",
+          background: "rgba(100,160,230,0.15)",
+          border: "1px solid rgba(130,180,240,0.25)",
+          borderRadius: "10px",
           color: "rgba(200,225,255,0.8)",
           fontSize: "0.75rem",
           padding: "4px 12px",
           cursor: "pointer",
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontFamily: "'Inter', sans-serif",
           whiteSpace: "nowrap",
+          transition: "background 0.2s ease",
         }}
       >
         OK
@@ -178,10 +180,11 @@ function AppointmentAlertBanner({
           key={alert.id}
           role="status"
           aria-live="polite"
-          className="flex items-center gap-3 rounded-xl px-4 py-3"
+          className="flex items-center gap-3 rounded-2xl px-4 py-3"
           style={{
-            background: "rgba(200,155,60,0.13)",
-            border: "1px solid rgba(210,170,70,0.35)",
+            background: "rgba(200,155,60,0.10)",
+            border: "1px solid rgba(210,170,70,0.28)",
+            backdropFilter: "blur(8px)",
           }}
         >
           {/* Soft amber bell icon */}
@@ -251,6 +254,22 @@ function getVoiceErrorMessage(error: VoiceError, t: Strings): string {
   }
 }
 
+// ── Derive event status from time string and current time ───────────────────
+
+function getEventStatus(
+  timeStr: string,
+  now: Date,
+): "past" | "now" | "future" {
+  if (!timeStr) return "future";
+  const [h, m] = timeStr.split(":").map(Number);
+  if (isNaN(h)) return "future";
+  const eventMins = h * 60 + (m ?? 0);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  if (eventMins < nowMins - 30) return "past";
+  if (eventMins <= nowMins + 15) return "now";
+  return "future";
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function MedicationButtons({
@@ -272,21 +291,26 @@ function MedicationButtons({
     onRespond(occurrenceId, response);
   };
 
-  const btnBase =
-    "rounded-lg px-3 py-2 text-sm transition-all active:scale-95 shrink-0";
-
   return (
     <span className="flex items-center gap-2 shrink-0">
+      {/* "I already took it" — primary affirm, warm amber ring */}
       <button
         onClick={() => handle("YES")}
         disabled={pending}
-        className={btnBase}
+        className="rounded-[60px] px-4 py-2 text-sm transition-all active:scale-[0.98]"
         style={{
-          background: "rgba(110,170,110,0.18)",
-          border: "1px solid rgba(110,170,110,0.35)",
-          color: "rgba(180,225,180,0.9)",
+          background: "linear-gradient(155deg, #2a1c0e 0%, #1e1409 100%)",
+          boxShadow: pending
+            ? "none"
+            : "0 0 0 1.5px #c89050bb, 0 0 28px 6px #c8905022, inset 0 1px 0 #ffffff0c",
+          color: pending ? "rgba(180,130,70,0.4)" : "#d4a060",
           cursor: pending ? "default" : "pointer",
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "0.8rem",
+          letterSpacing: "0.04em",
+          whiteSpace: "nowrap",
           opacity: pending ? 0.5 : 1,
+          border: "none",
         }}
         aria-label={t.medTaken}
       >
@@ -295,13 +319,18 @@ function MedicationButtons({
       <button
         onClick={() => handle("UNKNOWN")}
         disabled={pending}
-        className={btnBase}
+        className="rounded-[60px] px-4 py-2 text-sm transition-all active:scale-[0.98]"
         style={{
-          background: "rgba(200,175,110,0.14)",
-          border: "1px solid rgba(200,175,110,0.3)",
-          color: "rgba(230,210,160,0.85)",
+          background: "transparent",
+          boxShadow: "0 0 0 1px #3e3022",
+          color: pending ? "rgba(138,116,86,0.4)" : "#8a7456",
           cursor: pending ? "default" : "pointer",
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "0.8rem",
+          letterSpacing: "0.04em",
+          whiteSpace: "nowrap",
           opacity: pending ? 0.5 : 1,
+          border: "none",
         }}
         aria-label={t.medNotSure}
       >
@@ -310,13 +339,18 @@ function MedicationButtons({
       <button
         onClick={() => handle("NO")}
         disabled={pending}
-        className={btnBase}
+        className="rounded-[60px] px-4 py-2 text-sm transition-all active:scale-[0.98]"
         style={{
-          background: "rgba(200,90,70,0.14)",
-          border: "1px solid rgba(200,90,70,0.3)",
-          color: "rgba(235,175,155,0.85)",
+          background: "transparent",
+          boxShadow: "0 0 0 1px #3e2218",
+          color: pending ? "rgba(200,100,80,0.4)" : "#a06050",
           cursor: pending ? "default" : "pointer",
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "0.8rem",
+          letterSpacing: "0.04em",
+          whiteSpace: "nowrap",
           opacity: pending ? 0.5 : 1,
+          border: "none",
         }}
         aria-label={t.medNotTaken}
       >
@@ -325,6 +359,8 @@ function MedicationButtons({
     </span>
   );
 }
+
+// ── Portrait today list — card-style rows ──────────────────────────────────
 
 function TodayList({
   items,
@@ -339,7 +375,11 @@ function TodayList({
     return (
       <p
         className="text-center text-base"
-        style={{ color: "rgba(200,175,145,0.45)" }}
+        style={{
+          color: "rgba(90,78,58,0.7)",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: "italic",
+        }}
       >
         {t.noItemsToday}
       </p>
@@ -351,16 +391,23 @@ function TodayList({
       {items.map((item) => (
         <li
           key={item.id}
-          className="flex flex-wrap items-center gap-3 rounded-xl px-4 py-3"
+          className="flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.06)",
-            opacity: item.done ? 0.4 : 1,
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.05)",
+            opacity: item.done ? 0.35 : 1,
+            transition: "opacity 0.4s ease",
           }}
         >
           <span
-            className="text-sm font-mono shrink-0"
-            style={{ color: "rgba(200,155,90,0.85)", minWidth: 40 }}
+            className="text-sm shrink-0"
+            style={{
+              color: "rgba(200,168,112,0.7)",
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontStyle: "italic",
+              minWidth: 38,
+              letterSpacing: "0.06em",
+            }}
           >
             {item.time}
           </span>
@@ -376,8 +423,13 @@ function TodayList({
             }}
           />
           <span
-            className="text-base flex-1 truncate"
-            style={{ color: "rgba(240,220,195,0.85)", minWidth: 80 }}
+            className="flex-1 truncate"
+            style={{
+              color: "rgba(176,160,122,0.9)",
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontSize: "1.1rem",
+              minWidth: 80,
+            }}
           >
             {item.title}
           </span>
@@ -389,6 +441,128 @@ function TodayList({
     </ul>
   );
 }
+
+// ── Landscape schedule — elegant vertical timeline (SchedDark pattern) ──────
+
+function ScheduleTimeline({
+  items,
+  t,
+  now,
+  onRespond,
+}: {
+  items: TodayItem[];
+  t: Strings;
+  now: Date;
+  onRespond: (occurrenceId: string, response: "YES" | "UNKNOWN" | "NO") => void;
+}) {
+  if (!items.length) {
+    return (
+      <p
+        className="text-base"
+        style={{
+          color: "rgba(90,78,58,0.6)",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontStyle: "italic",
+        }}
+      >
+        {t.noItemsToday}
+      </p>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col" style={{ gap: 0 }}>
+      {/* Vertical thread line */}
+      <div
+        className="absolute"
+        style={{
+          left: 0,
+          top: 12,
+          bottom: 12,
+          width: 1,
+          background: "linear-gradient(to bottom, transparent, #5a4020 12%, #5a4020 88%, transparent)",
+        }}
+      />
+
+      {items.map((item, idx) => {
+        const status = getEventStatus(item.time, now);
+        return (
+          <div
+            key={item.id}
+            className="flex flex-row items-center"
+            style={{
+              paddingLeft: 32,
+              paddingTop: 13,
+              paddingBottom: 13,
+              position: "relative",
+              opacity: item.done ? 0.3 : status === "past" ? 0.35 : status === "future" ? 0.70 : 1,
+              transition: "opacity 0.4s ease",
+              // Transform-only stagger entrance
+              animation: `schedSlideIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) both`,
+              animationDelay: `${0.08 + idx * 0.10}s`,
+            }}
+          >
+            {/* Thread dot */}
+            <span
+              style={{
+                position: "absolute",
+                left: status === "now" ? -5 : -4,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: status === "now" ? 11 : 9,
+                height: status === "now" ? 11 : 9,
+                borderRadius: "50%",
+                background: status === "now" ? "#c89050" : "#3a2c18",
+                border: `1px solid ${status === "now" ? "#d4a060" : "#6a5030"}`,
+                boxShadow: status === "now" ? "0 0 10px 4px #c8905050" : "none",
+                flexShrink: 0,
+              }}
+            />
+
+            {/* Time */}
+            <span
+              style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                fontStyle: "italic",
+                fontWeight: 300,
+                fontSize: 15,
+                letterSpacing: "0.06em",
+                color: "#c8a870",
+                width: 56,
+                flexShrink: 0,
+                opacity: status === "now" ? 0.75 : 0.55,
+              }}
+            >
+              {item.time}
+            </span>
+
+            {/* Title */}
+            <span
+              style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                fontWeight: status === "now" ? 400 : 300,
+                fontSize: status === "now" ? 26 : status === "past" ? 20 : 23,
+                letterSpacing: "0.01em",
+                lineHeight: 1.1,
+                color: status === "now" ? "#d4b080" : "#a89070",
+                flex: 1,
+              }}
+            >
+              {item.title}
+            </span>
+
+            {/* Unanswered medication items remain actionable even when overdue. */}
+            {item.type === "medication" && !item.done && item.occurrenceId && (
+              <MedicationButtons item={item} t={t} onRespond={onRespond} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── State label ─────────────────────────────────────────────────────────────
 
 function StateLabel({
   companionState,
@@ -407,17 +581,20 @@ function StateLabel({
         : t.speaking;
   return (
     <p
-      className="text-base tracking-wide animate-pulse"
+      className="text-base tracking-wide"
       style={{
         color: "rgba(200,225,245,0.75)",
         fontStyle: "italic",
         fontFamily: "'Cormorant Garamond', Georgia, serif",
+        animation: "textFadeIn 1.2s ease forwards",
       }}
     >
       {label}
     </p>
   );
 }
+
+// ── DND overlay ──────────────────────────────────────────────────────────────
 
 function DndOverlay({ t }: { t: { dndTitle: string; dndSubtitle: string } }) {
   return (
@@ -453,6 +630,8 @@ function DndOverlay({ t }: { t: { dndTitle: string; dndSubtitle: string } }) {
     </div>
   );
 }
+
+// ── Offline overlay ──────────────────────────────────────────────────────────
 
 function OfflineOverlay({
   t,
@@ -518,11 +697,14 @@ function VoiceErrorBanner({
     <div
       role="alert"
       aria-live="polite"
-      className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-center text-sm"
+      className="flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-center text-sm"
       style={{
-        background: "rgba(180,80,60,0.12)",
-        border: "1px solid rgba(200,80,60,0.25)",
+        background: "rgba(180,80,60,0.10)",
+        border: "1px solid rgba(200,80,60,0.22)",
         color: "rgba(240,190,160,0.85)",
+        fontFamily: "'Cormorant Garamond', Georgia, serif",
+        fontStyle: "italic",
+        fontSize: "1rem",
       }}
     >
       {/* Gentle warning dot */}
@@ -535,7 +717,9 @@ function VoiceErrorBanner({
   );
 }
 
-/** Talk button label and styles — changes based on voice phase. */
+// ── Talk button ──────────────────────────────────────────────────────────────
+
+/** Talk button — matches companion.css .talk-button spirit with dark ring style. */
 function TalkButton({
   voicePhase,
   isDnd,
@@ -551,63 +735,229 @@ function TalkButton({
   const isUploading = voicePhase === "uploading";
   const isDisabled = isDnd || isUploading;
 
-  // Recording: amber-red pulse ring to signal "mic is live"
-  const buttonBg = isDnd
-    ? "rgba(180,130,90,0.15)"
-    : isRecording
-      ? "rgba(200,80,60,0.75)"
-      : isUploading
-        ? "rgba(180,130,90,0.3)"
-        : "rgba(180,130,90,0.82)";
-
-  const buttonColor = isDnd || isUploading
-    ? "rgba(240,210,170,0.3)"
-    : "rgba(255,240,215,0.95)";
-
   const label = isRecording
     ? t.stopListening
     : isUploading
       ? "…"
       : t.talkButton;
 
+  // Derived box-shadow: calm dark ring style from companion.css .talk-button
+  const boxShadow = isDisabled
+    ? "0 0 0 1px rgba(90,78,58,0.4)"
+    : isRecording
+      ? "0 0 0 1.5px #cc6644bb, 0 0 48px 14px #cc664436, inset 0 1px 0 #ffffff10"
+      : "0 0 0 1px #a06828, 0 0 32px 8px #a0682822, inset 0 1px 0 #ffffff08";
+
+  const bgColor = isRecording
+    ? "#1a0e08"
+    : isDnd
+      ? "#110e0a"
+      : "#120e08";
+
+  const textColor = isDisabled
+    ? "rgba(176,122,58,0.3)"
+    : isRecording
+      ? "#cc8855"
+      : "#b07a3a";
+
   return (
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className="w-full rounded-2xl py-7 text-2xl tracking-wide transition-all active:scale-[0.97]"
+      className="w-full transition-all active:scale-[0.98]"
       style={{
-        background: buttonBg,
-        color: buttonColor,
-        border: isRecording ? "2px solid rgba(220,100,70,0.5)" : "none",
+        borderRadius: 60,
+        padding: "24px 0",
+        background: bgColor,
+        boxShadow,
+        border: "none",
         cursor: isDisabled ? "not-allowed" : "pointer",
-        fontFamily: "Inter, sans-serif",
-        fontWeight: 500,
-        letterSpacing: "0.04em",
-        boxShadow:
-          isDisabled || isUploading
-            ? "none"
-            : isRecording
-              ? "0 4px 40px rgba(200,80,60,0.3)"
-              : "0 4px 40px rgba(180,130,90,0.25)",
+        outline: "none",
+        WebkitAppearance: "none",
+        appearance: "none",
         // Pulse animation while recording
-        animation: isRecording ? "pulse 1.5s ease-in-out infinite" : "none",
+        animation: isRecording ? "talkPulse 1.8s ease-in-out infinite" : "none",
       }}
       aria-label={label}
       aria-pressed={isRecording}
     >
-      {isRecording ? (
-        <span className="flex items-center justify-center gap-2">
-          {/* Live mic indicator */}
+      <span
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontWeight: 400,
+          fontSize: "1rem",
+          letterSpacing: "0.32em",
+          color: textColor,
+          textTransform: "uppercase",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {isRecording && (
           <span
-            className="h-3 w-3 rounded-full"
-            style={{ background: "rgba(255,100,70,0.9)" }}
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ background: "rgba(220,110,70,0.9)" }}
           />
-          {label}
-        </span>
-      ) : (
-        label
-      )}
+        )}
+        {label}
+      </span>
     </button>
+  );
+}
+
+// ── Photo overlay ────────────────────────────────────────────────────────────
+
+function PhotoOverlay({
+  url,
+  onClose,
+}: {
+  url: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.92)" }}
+    >
+      {/* Top vignette */}
+      <div
+        className="absolute left-0 right-0 top-0 pointer-events-none"
+        style={{
+          height: 180,
+          background: "linear-gradient(to bottom, rgba(14,11,8,0.55), transparent)",
+          zIndex: 1,
+        }}
+      />
+      <img
+        src={url}
+        alt="Photo"
+        className="relative z-10"
+        style={{
+          maxWidth: "92vw",
+          maxHeight: "78vh",
+          borderRadius: 16,
+          objectFit: "contain",
+          // Subtle warm tone shift matching photo.css
+          filter: "saturate(0.88) sepia(0.12) brightness(0.96)",
+        }}
+      />
+      {/* Bottom gradient fade */}
+      <div
+        className="absolute left-0 right-0 bottom-0 pointer-events-none"
+        style={{
+          height: 240,
+          background: "linear-gradient(to bottom, transparent 0%, #0e0b0840 28%, #0e0b08c0 58%, #0e0b08 80%)",
+          zIndex: 1,
+        }}
+      />
+      <button
+        onClick={onClose}
+        className="relative z-20 mt-6 transition-all active:scale-[0.98]"
+        style={{
+          borderRadius: 60,
+          padding: "18px 60px",
+          background: "#120e08",
+          boxShadow: "0 0 0 1px #a06828, 0 0 32px 8px #a0682822, inset 0 1px 0 #ffffff08",
+          border: "none",
+          cursor: "pointer",
+          outline: "none",
+        }}
+        aria-label="Close photo"
+      >
+        <span
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            letterSpacing: "0.28em",
+            color: "#b07a3a",
+            textTransform: "uppercase",
+          }}
+        >
+          CLOSE
+        </span>
+      </button>
+    </div>
+  );
+}
+
+// ── Companion name lockup — matches LogoDark horizontal lockup ───────────────
+
+function CompanionNameLockup({
+  name,
+  size = "md",
+}: {
+  name: string;
+  size?: "sm" | "md";
+}) {
+  const ringSize = size === "sm" ? 32 : 36;
+  const innerSize = size === "sm" ? 10 : 12;
+  const fontSize = size === "sm" ? "1rem" : "1.2rem";
+
+  return (
+    <div className="flex items-center" style={{ gap: size === "sm" ? 10 : 12 }}>
+      {/* The mark — outer translucent ring + inner solid circle */}
+      <div
+        className="relative flex items-center justify-center flex-shrink-0"
+        style={{ width: ringSize, height: ringSize }}
+      >
+        {/* Outer translucent ring */}
+        <span
+          className="absolute inset-0 rounded-full"
+          style={{ border: "1px solid #4a3a22" }}
+        />
+        {/* Layered glow */}
+        <span
+          className="absolute rounded-full"
+          style={{
+            width: ringSize * 0.72,
+            height: ringSize * 0.72,
+            background: "radial-gradient(circle, hsla(34,70%,40%,0.30) 0%, transparent 70%)",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        />
+        <span
+          className="absolute rounded-full"
+          style={{
+            width: ringSize * 0.46,
+            height: ringSize * 0.46,
+            background: "radial-gradient(circle, hsla(36,85%,58%,0.65) 0%, transparent 66%)",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        />
+        {/* Inner solid circle — the glow core */}
+        <span
+          className="relative rounded-full"
+          style={{
+            width: innerSize,
+            height: innerSize,
+            background: "radial-gradient(circle, #fffdf8 0%, hsla(40,95%,74%,0.9) 55%, transparent 75%)",
+          }}
+        />
+      </div>
+      {/* Wordmark */}
+      <p
+        style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontWeight: 300,
+          fontStyle: "italic",
+          fontSize,
+          letterSpacing: "0.04em",
+          color: "rgba(200,155,90,0.75)",
+          margin: 0,
+          lineHeight: 1,
+        }}
+      >
+        {name}
+      </p>
+    </div>
   );
 }
 
@@ -658,30 +1008,7 @@ export function HomePage() {
     >
       {/* Photo fullscreen overlay — shown when companion calls show_photo */}
       {pendingPhotoUrl && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.92)" }}
-        >
-          <img
-            src={pendingPhotoUrl}
-            alt="Photo"
-            className="max-w-[92vw] max-h-[82vh] rounded-2xl shadow-2xl object-contain"
-          />
-          <button
-            onClick={clearPendingPhoto}
-            className="mt-6 rounded-2xl px-10 py-4 text-lg tracking-wide transition-all active:scale-[0.97]"
-            style={{
-              background: "rgba(180,130,90,0.82)",
-              color: "rgba(255,240,215,0.95)",
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 500,
-              letterSpacing: "0.04em",
-              boxShadow: "0 4px 40px rgba(180,130,90,0.25)",
-            }}
-          >
-            Close
-          </button>
-        </div>
+        <PhotoOverlay url={pendingPhotoUrl} onClose={clearPendingPhoto} />
       )}
 
       {/* Offline overlay */}
@@ -690,42 +1017,27 @@ export function HomePage() {
       {orientation === "portrait" ? (
         // ── Portrait layout ──────────────────────────────────────────────
         <div className="flex flex-col min-h-screen px-6 py-8 gap-6">
-          {/* Header: companion name + greeting */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(200,155,90,0.14)" }}
-              >
-                <div
-                  className="w-[18px] h-[18px] rounded-full"
-                  style={{ background: "rgba(200,155,90,0.8)" }}
-                />
-              </div>
-              <p
-                className="text-2xl italic font-light tracking-wide lowercase"
-                style={{
-                  fontFamily: "Georgia, serif",
-                  color: "rgba(200,155,90,0.75)",
-                }}
-              >
-                {companionName}
-              </p>
-            </div>
+          {/* Header: companion lockup + greeting */}
+          <header className="flex flex-col gap-2">
+            <CompanionNameLockup name={companionName} size="md" />
             <h1
-              className="text-3xl leading-tight"
               style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
-                fontStyle: "italic",
-                color: "rgba(255,235,200,0.88)",
+                fontWeight: 300,
+                fontSize: "1.75rem",
+                fontStyle: "normal",
+                letterSpacing: "0.025em",
+                color: "#ede3d0",
+                margin: 0,
+                lineHeight: 1.2,
               }}
             >
               {liveGreeting}
             </h1>
-          </div>
+          </header>
 
           {/* Orb + state label */}
-          <div className="flex flex-col items-center gap-4 flex-1 justify-center relative">
+          <main className="flex flex-col items-center gap-4 flex-1 justify-center relative">
             {isDnd ? (
               <div className="relative" style={{ borderRadius: "50%" }}>
                 <AmbientOrb
@@ -743,7 +1055,7 @@ export function HomePage() {
               />
             )}
             <StateLabel companionState={companionState} t={t} />
-          </div>
+          </main>
 
           {/* Routine check-in banner */}
           {checkIn && (
@@ -756,15 +1068,22 @@ export function HomePage() {
           )}
 
           {/* Today list */}
-          <div className="flex flex-col gap-3">
+          <section className="flex flex-col gap-3">
             <p
-              className="text-xs tracking-[0.2em] uppercase"
-              style={{ color: "rgba(200,155,90,0.5)" }}
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 500,
+                fontSize: "0.625rem",
+                letterSpacing: "0.24em",
+                textTransform: "uppercase",
+                color: "#5a4e3a",
+                margin: 0,
+              }}
             >
               {t.todayLabel}
             </p>
             <TodayList items={todayItems} t={t} onRespond={handleRespond} />
-          </div>
+          </section>
 
           {/* Talk button + error banner */}
           <div className="flex flex-col gap-3">
@@ -784,63 +1103,68 @@ export function HomePage() {
           </div>
         </div>
       ) : (
-        // ── Landscape layout ─────────────────────────────────────────────
+        // ── Landscape layout — 1194×834 reference treatment ──────────────
+        // Left: greeting + today timeline | Center: orb | Right: talk button
         <div className="flex min-h-screen items-stretch">
-          {/* Left: greeting + today */}
+
+          {/* ── Left column: name + greeting + today timeline ── */}
           <div
-            className="flex flex-col justify-between px-8 py-8 gap-4"
-            style={{ width: "36%" }}
+            className="flex flex-col justify-between py-8"
+            style={{ width: "36%", paddingLeft: 68, paddingRight: 28 }}
           >
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(200,155,90,0.14)" }}
-                >
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ background: "rgba(200,155,90,0.8)" }}
-                  />
-                </div>
-                <p
-                  className="text-xl italic font-light tracking-wide lowercase"
-                  style={{
-                    fontFamily: "Georgia, serif",
-                    color: "rgba(200,155,90,0.75)",
-                  }}
-                >
-                  {companionName}
-                </p>
-              </div>
+            <div className="flex flex-col gap-2">
+              <CompanionNameLockup name={companionName} size="sm" />
               <h1
-                className="text-2xl leading-tight"
                 style={{
                   fontFamily: "'Cormorant Garamond', Georgia, serif",
-                  fontStyle: "italic",
-                  color: "rgba(255,235,200,0.88)",
+                  fontWeight: 300,
+                  fontSize: "2.875rem",
+                  letterSpacing: "0.025em",
+                  color: "#ede3d0",
+                  margin: 0,
+                  lineHeight: 1.15,
                 }}
               >
                 {liveGreeting}
               </h1>
             </div>
-            <div className="flex flex-col gap-3 flex-1 mt-4">
+
+            {/* Banners + schedule timeline */}
+            <div className="flex flex-col gap-3 flex-1 mt-5 overflow-y-auto">
               {checkIn && (
                 <CheckInBanner text={checkIn.text} onDismiss={dismissCheckIn} />
               )}
               {appointmentAlerts.length > 0 && (
                 <AppointmentAlertBanner alerts={appointmentAlerts} t={t} />
               )}
+              {/* "Today" label */}
               <p
-                className="text-xs tracking-[0.2em] uppercase"
-                style={{ color: "rgba(200,155,90,0.5)" }}
+                style={{
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  fontWeight: 300,
+                  fontStyle: "italic",
+                  fontSize: "1rem",
+                  letterSpacing: "0.22em",
+                  color: "#c8a870",
+                  opacity: 0.45,
+                  margin: "0 0 8px 0",
+                  textTransform: "lowercase",
+                  // Slide in from side
+                  animation: "schedFadeIn 1.0s ease both",
+                }}
               >
                 {t.todayLabel}
               </p>
-              <TodayList items={todayItems} t={t} onRespond={handleRespond} />
+              <ScheduleTimeline
+                items={todayItems}
+                t={t}
+                now={now}
+                onRespond={handleRespond}
+              />
             </div>
           </div>
 
-          {/* Center: orb */}
+          {/* ── Center column: orb ── */}
           <div
             className="flex flex-col items-center justify-center gap-4 relative"
             style={{ width: "28%" }}
@@ -864,10 +1188,10 @@ export function HomePage() {
             <StateLabel companionState={companionState} t={t} />
           </div>
 
-          {/* Right: Talk button + error */}
+          {/* ── Right column: talk button + error ── */}
           <div
-            className="flex flex-col items-center justify-center gap-3 px-8"
-            style={{ width: "36%" }}
+            className="flex flex-col items-center justify-end gap-3"
+            style={{ width: "36%", paddingRight: 68, paddingBottom: 50, paddingLeft: 28 }}
           >
             {voiceError && (
               <VoiceErrorBanner
@@ -876,7 +1200,7 @@ export function HomePage() {
                 onDismiss={clearVoiceError}
               />
             )}
-            <div style={{ width: "100%", maxWidth: 280 }}>
+            <div style={{ width: "100%", maxWidth: 320 }}>
               <TalkButton
                 voicePhase={voicePhase}
                 isDnd={isDnd}
@@ -885,6 +1209,7 @@ export function HomePage() {
               />
             </div>
           </div>
+
         </div>
       )}
     </div>

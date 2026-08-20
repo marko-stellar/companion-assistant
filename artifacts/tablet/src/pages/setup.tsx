@@ -35,83 +35,163 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     }
   }
 
+  const isReady = !loading && code.trim().length >= 6;
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-8"
       style={{ background: "#0e0b08" }}
     >
-      {/* Ambient blobs */}
+      {/* ── Ambient atmosphere blobs — same organic warmth as the home screen ── */}
       <div
         className="pointer-events-none fixed inset-0 overflow-hidden"
         aria-hidden
       >
+        {/* Top-right warm bloom */}
         <div
-          className="absolute rounded-full opacity-20"
+          className="absolute rounded-full"
           style={{
             width: 480,
             height: 480,
             top: "-120px",
             right: "-80px",
-            background:
-              "radial-gradient(circle, rgba(180,130,90,0.6) 0%, transparent 70%)",
-            filter: "blur(60px)",
+            background: "radial-gradient(circle, rgba(180,130,90,0.6) 0%, transparent 70%)",
+            filter: "blur(72px)",
+            opacity: 0.18,
           }}
         />
+        {/* Bottom-left dim ember */}
         <div
-          className="absolute rounded-full opacity-15"
+          className="absolute rounded-full"
           style={{
             width: 320,
             height: 320,
             bottom: "60px",
             left: "-60px",
-            background:
-              "radial-gradient(circle, rgba(120,90,70,0.7) 0%, transparent 70%)",
-            filter: "blur(50px)",
+            background: "radial-gradient(circle, rgba(120,90,70,0.7) 0%, transparent 70%)",
+            filter: "blur(56px)",
+            opacity: 0.14,
           }}
         />
       </div>
 
       <div className="relative z-10 w-full max-w-sm flex flex-col items-center gap-10">
-        {/* Logo / wordmark */}
-        <div className="text-center flex flex-col items-center">
+
+        {/* ── Logo / wordmark — LogoDark lockup ── */}
+        <div className="flex flex-col items-center" style={{ gap: 40 }}>
+          {/* The mark: outer hairline ring + layered radial glow + inner spark */}
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-            style={{ background: "rgba(200,155,90,0.14)" }}
+            className="relative flex items-center justify-center"
+            style={{ width: 180, height: 180 }}
           >
-            <div
-              className="w-6 h-6 rounded-full"
-              style={{ background: "rgba(200,155,90,0.8)" }}
+            {/* Hairline ring — the vessel */}
+            <span
+              className="absolute inset-0 rounded-full"
+              style={{ border: "1px solid #4a3a22" }}
+            />
+            {/* Outer atmosphere glow */}
+            <span
+              className="absolute rounded-full"
+              style={{
+                width: 150,
+                height: 150,
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "radial-gradient(circle, hsla(34,70%,40%,0.35) 0%, transparent 68%)",
+                borderRadius: "50%",
+              }}
+            />
+            {/* Mid bloom */}
+            <span
+              className="absolute rounded-full"
+              style={{
+                width: 96,
+                height: 96,
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "radial-gradient(circle, hsla(36,85%,58%,0.75) 0%, transparent 66%)",
+                borderRadius: "50%",
+              }}
+            />
+            {/* Core */}
+            <span
+              className="absolute rounded-full"
+              style={{
+                width: 46,
+                height: 46,
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "radial-gradient(circle, hsla(40,95%,74%,0.95) 0%, transparent 64%)",
+                borderRadius: "50%",
+              }}
+            />
+            {/* Hot point */}
+            <span
+              className="absolute rounded-full"
+              style={{
+                width: 14,
+                height: 14,
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "radial-gradient(circle, #fffdf8 0%, hsla(42,100%,88%,0.6) 55%, transparent 75%)",
+                borderRadius: "50%",
+              }}
             />
           </div>
-          <h1
-            className="text-5xl italic font-light tracking-wide lowercase mb-2"
-            style={{
-              fontFamily: "Georgia, serif",
-              color: "rgba(255,235,200,0.92)",
-            }}
-          >
-            companion
-          </h1>
-          <p
-            className="text-sm tracking-[0.25em] uppercase"
-            style={{ color: "rgba(200,175,145,0.55)" }}
-          >
-            Device Setup
-          </p>
+
+          {/* Wordmark — matches logo.css */}
+          <div className="text-center">
+            <p
+              style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                fontWeight: 300,
+                fontSize: "4rem",
+                letterSpacing: "0.06em",
+                lineHeight: 1,
+                color: "#e8dcc0",
+                margin: "0 0 16px 0",
+              }}
+            >
+              companion
+            </p>
+            <p
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 300,
+                fontSize: "0.625rem",
+                letterSpacing: "0.24em",
+                textTransform: "lowercase",
+                color: "#5a4830",
+                margin: 0,
+              }}
+            >
+              device setup
+            </p>
+          </div>
         </div>
 
-        {/* Card */}
+        {/* ── Setup card ── */}
         <div
-          className="w-full rounded-2xl p-8 flex flex-col gap-6"
+          className="w-full rounded-2xl flex flex-col gap-6"
           style={{
-            background: "rgba(255,255,255,0.035)",
-            border: "1px solid rgba(255,255,255,0.07)",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
             backdropFilter: "blur(12px)",
+            padding: "2rem",
           }}
         >
           <p
-            className="text-center text-base leading-relaxed"
-            style={{ color: "rgba(220,195,165,0.75)" }}
+            className="text-center leading-relaxed"
+            style={{
+              color: "rgba(176,160,122,0.75)",
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontStyle: "italic",
+              fontSize: "1.1rem",
+            }}
           >
             {t.setupSubtitle}
           </p>
@@ -131,13 +211,15 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               spellCheck={false}
               inputMode="text"
               maxLength={8}
-              className="w-full text-center text-3xl tracking-[0.4em] font-mono rounded-xl px-4 py-5 outline-none transition-all"
+              className="w-full text-center tracking-[0.4em] font-mono rounded-2xl outline-none transition-all"
               style={{
-                background: "rgba(255,255,255,0.06)",
+                fontSize: "1.875rem",
+                padding: "1.25rem 1rem",
+                background: "rgba(255,255,255,0.05)",
                 border: error
-                  ? "1.5px solid rgba(220,100,80,0.7)"
-                  : "1.5px solid rgba(255,255,255,0.12)",
-                color: "rgba(255,235,200,0.95)",
+                  ? "1px solid rgba(200,90,70,0.6)"
+                  : "1px solid rgba(255,255,255,0.10)",
+                color: "#fffdf8",
                 caretColor: "rgba(200,155,90,0.8)",
               }}
               aria-label="Setup code"
@@ -147,42 +229,64 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             {error && (
               <p
                 className="text-center text-sm"
-                style={{ color: "rgba(220,100,80,0.9)" }}
+                style={{
+                  color: "rgba(220,100,80,0.9)",
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  fontStyle: "italic",
+                  fontSize: "1rem",
+                }}
                 role="alert"
               >
                 {error}
               </p>
             )}
 
+            {/* Submit — same pill style as companion.css .talk-button */}
             <button
               type="submit"
-              disabled={loading || code.trim().length < 6}
-              className="w-full rounded-xl py-5 text-lg font-medium tracking-wide transition-all active:scale-[0.98]"
+              disabled={!isReady}
+              className="w-full transition-all active:scale-[0.98]"
               style={{
-                background:
-                  loading || code.trim().length < 6
-                    ? "rgba(180,130,90,0.25)"
-                    : "rgba(180,130,90,0.85)",
-                color:
-                  loading || code.trim().length < 6
-                    ? "rgba(255,235,200,0.35)"
-                    : "rgba(255,235,200,0.95)",
+                borderRadius: 60,
+                padding: "22px 0",
+                background: "#120e08",
+                boxShadow: isReady
+                  ? "0 0 0 1px #a06828, 0 0 32px 8px #a0682822, inset 0 1px 0 #ffffff08"
+                  : "0 0 0 1px #3a2e1e",
                 border: "none",
-                cursor:
-                  loading || code.trim().length < 6
-                    ? "not-allowed"
-                    : "pointer",
-                fontFamily: "Inter, sans-serif",
+                cursor: isReady ? "pointer" : "not-allowed",
+                outline: "none",
+                WebkitAppearance: "none",
+                appearance: "none",
               }}
             >
-              {loading ? t.setupLoading : t.setupButton}
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 400,
+                  fontSize: "1rem",
+                  letterSpacing: "0.32em",
+                  color: isReady ? "#b07a3a" : "rgba(176,122,58,0.3)",
+                  textTransform: "uppercase",
+                }}
+              >
+                {loading ? t.setupLoading : t.setupButton}
+              </span>
             </button>
           </form>
         </div>
 
+        {/* Fine print */}
         <p
-          className="text-center text-xs"
-          style={{ color: "rgba(200,175,145,0.35)" }}
+          className="text-center"
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 300,
+            fontSize: "0.7rem",
+            letterSpacing: "0.04em",
+            color: "#5a4830",
+            lineHeight: 1.6,
+          }}
         >
           The code expires after 24 hours.
           <br />

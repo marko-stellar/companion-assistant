@@ -20,5 +20,6 @@ export const modules: ModuleMap = {
   "./components/mockups/companion/SettingsDark.tsx": () => import("../components/mockups/companion/SettingsDark.tsx"),
   "./components/mockups/companion/SettingsLight.tsx": () => import("../components/mockups/companion/SettingsLight.tsx"),
   "./components/mockups/companion/SpeakDark.tsx": () => import("../components/mockups/companion/SpeakDark.tsx"),
-  "./components/mockups/companion/SpeakLight.tsx": () => import("../components/mockups/companion/SpeakLight.tsx")
+  "./components/mockups/companion/SpeakLight.tsx": () => import("../components/mockups/companion/SpeakLight.tsx"),
+  "./components/mockups/companion-tablet-current/Current.tsx": () => import("../components/mockups/companion-tablet-current/Current.tsx")
 };

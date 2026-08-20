@@ -1,4 +1,5 @@
 - [COMPANION motion & screenshot lessons](companion-motion-language.md) — transform-only staggering (opacity keyframes break screenshots), sine-breath motion rules, canvas row layout.
+- [COMPANION tablet visual contract](companion-tablet-visual-contract.md) — approved dark canvas screens are the tablet’s visual source of truth; presentation must not hide actionable reminders.
 - [COMPANION foundation](companion-foundation.md) — architecture decisions and constraints of the base platform (pgvector, artifact layout, provider abstraction).
 - [COMPANION scheduling lessons](companion-scheduling.md) — wipe pending occurrences on schedule edits; local-day end = next local midnight (DST); migrations must live in the drizzle chain (pty workaround for generate).
 - [COMPANION codegen quirks](companion-codegen-quirks.md) — Orval appends to index.ts instead of overwriting; api-client-react must re-export custom-fetch.ts; api-zod must override index to only export generated/api.

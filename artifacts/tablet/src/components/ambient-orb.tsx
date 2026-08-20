@@ -8,7 +8,7 @@ interface AmbientOrbProps {
   companionName?: string;
 }
 
-interface Layer {
+interface BlobLayer {
   color: [number, number, number];
   x: number;
   y: number;
@@ -78,7 +78,7 @@ const STATE_AMPS: Record<CompanionState, number> = {
 export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
-  const layersRef = useRef<Layer[]>([]);
+  const layersRef = useRef<BlobLayer[]>([]);
   const stateRef = useRef<CompanionState>(state);
   const rotationRef = useRef(0);
 
@@ -211,31 +211,50 @@ export function AmbientOrb({ state, size = 280, companionName }: AmbientOrbProps
     return () => cancelAnimationFrame(rafRef.current);
   }, [size]); // only re-init if size changes
 
+  // Glow color derived from state — transitions smoothly via CSS transition
+  const glowColor =
+    state === "listening"
+      ? "rgba(120,180,220,0.18)"
+      : state === "thinking"
+      ? "rgba(160,110,200,0.18)"
+      : state === "speaking"
+      ? "rgba(90,200,160,0.18)"
+      : state === "dnd"
+      ? "rgba(80,70,110,0.10)"
+      : state === "offline"
+      ? "rgba(80,80,80,0.08)"
+      : "rgba(180,130,90,0.12)";
+
   return (
     <div
       className="relative select-none"
       style={{ width: size, height: size }}
       aria-label={companionName ? `${companionName} companion orb` : "Companion orb"}
+      role="img"
     >
-      {/* Soft glow behind orb */}
+      {/* Outer halo — bleeds beyond the circle boundary */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          inset: -size * 0.18,
+          borderRadius: "50%",
+          background: glowColor,
+          filter: `blur(${Math.round(size * 0.22)}px)`,
+          transition: "background 1.4s ease",
+        }}
+      />
+      {/* Hairline ring — the vessel, like logo.css .logo-ring */}
       <div
         className="absolute inset-0 rounded-full pointer-events-none"
         style={{
-          filter: "blur(28px)",
-          background:
-            state === "listening"
-              ? "rgba(120,180,220,0.12)"
-              : state === "thinking"
-              ? "rgba(160,110,200,0.12)"
-              : state === "speaking"
-              ? "rgba(90,200,160,0.12)"
-              : "rgba(180,130,90,0.08)",
-          transition: "background 1.2s ease",
+          border: "1px solid rgba(74, 58, 34, 0.55)",
+          transition: "border-color 1.2s ease",
+          zIndex: 2,
         }}
       />
       <canvas
         ref={canvasRef}
-        style={{ width: size, height: size, borderRadius: "50%" }}
+        style={{ width: size, height: size, borderRadius: "50%", display: "block" }}
       />
     </div>
   );

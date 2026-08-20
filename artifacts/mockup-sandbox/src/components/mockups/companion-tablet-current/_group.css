@@ -1,0 +1,32 @@
+/* Tablet app fonts — scoped to this mockup group only */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap");
+
+/* Tablet app CSS tokens — mirrors artifacts/tablet/src/index.css :root block */
+:root {
+  --background: 30 15% 5%;
+  --foreground: 38 35% 73%;
+  --border: 30 18% 14%;
+  --card: 30 18% 7%;
+  --card-foreground: 38 35% 73%;
+  --card-border: 30 18% 14%;
+  --popover: 30 18% 8%;
+  --popover-foreground: 38 35% 73%;
+  --popover-border: 30 18% 14%;
+  --primary: 30 47% 55%;
+  --primary-foreground: 30 15% 5%;
+  --secondary: 30 18% 10%;
+  --secondary-foreground: 38 35% 73%;
+  --muted: 30 18% 9%;
+  --muted-foreground: 30 23% 49%;
+  --accent: 30 18% 14%;
+  --accent-foreground: 38 35% 73%;
+  --destructive: 6 63% 47%;
+  --destructive-foreground: 38 33% 93%;
+  --input: 30 18% 16%;
+  --ring: 30 47% 55%;
+  --radius: 0.5rem;
+
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: 'Cormorant Garamond', Georgia, serif;
+  --app-font-mono: Menlo, monospace;
+}

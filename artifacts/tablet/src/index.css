@@ -340,6 +340,32 @@
  * Even without handling focused or not, this is six possible combinations that
  * need to be distinguished from eachother visually.
  */
+/* ── Companion UI keyframes ─────────────────────────────────────────────── */
+
+/* Fade + lift — used by StateLabel and check-in text (listen.css textFadeIn) */
+@keyframes textFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Schedule item entrance — transform-only, opacity never hidden (schedSlideIn) */
+@keyframes schedSlideIn {
+  from { transform: translateX(12px); }
+  to   { transform: translateX(0); }
+}
+
+/* Schedule header entrance */
+@keyframes schedFadeIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 0.45; transform: translateX(0); }
+}
+
+/* Talk button recording pulse — sine-based, no bouncy easing */
+@keyframes talkPulse {
+  0%, 100% { box-shadow: 0 0 0 1.5px #cc6644bb, 0 0 32px 8px #cc664436, inset 0 1px 0 #ffffff08; }
+  50%       { box-shadow: 0 0 0 1.5px #cc6644dd, 0 0 56px 18px #cc664452, inset 0 1px 0 #ffffff10; }
+}
+
 @layer utilities {
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type='search']::-webkit-search-cancel-button {

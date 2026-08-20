@@ -20,3 +20,18 @@ visual states (idle, listening, speaking, reminder, schedule, photo, and
 conversation), but never use visual time status to hide existing actions.
 Presentation may de-emphasize overdue items; unanswered medication
 confirmations must remain available in every responsive layout.
+
+## Confirmed listening mode
+
+The approved listening treatment is the warm five-layer ambient bloom with
+three staggered, outward-expanding amber rings. It replaces the orb visual
+only while the companion is actively listening; the other state visuals stay
+distinct.
+
+**Why:** The creator explicitly selected and approved this exact canvas
+animation for the production listening state.
+
+**How to apply:** Preserve its slow breathing cadence, hue drift, 6-second
+staggered rings, and restrained italic status copy. Connect it only to the
+existing recording/listening state, not to upload, playback, DND, or offline
+states.

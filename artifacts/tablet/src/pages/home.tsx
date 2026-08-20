@@ -583,9 +583,14 @@ function StateLabel({
     <p
       className="text-base tracking-wide"
       style={{
-        color: "rgba(200,225,245,0.75)",
+        color:
+          companionState === "listening"
+            ? "#d4c4a0"
+            : "rgba(200,225,245,0.75)",
         fontStyle: "italic",
         fontFamily: "'Cormorant Garamond', Georgia, serif",
+        fontSize: companionState === "listening" ? "2.375rem" : undefined,
+        marginTop: companionState === "listening" ? 28 : undefined,
         animation: "textFadeIn 1.2s ease forwards",
       }}
     >

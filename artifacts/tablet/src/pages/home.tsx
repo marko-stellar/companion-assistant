@@ -480,7 +480,7 @@ function ScheduleTimeline({
           top: 12,
           bottom: 12,
           width: 1,
-          background: "linear-gradient(to bottom, transparent, #5a4020 12%, #5a4020 88%, transparent)",
+          background: "linear-gradient(to bottom, transparent, #8c6c3e 12%, #8c6c3e 88%, transparent)",
         }}
       />
 
@@ -495,7 +495,7 @@ function ScheduleTimeline({
               paddingTop: 13,
               paddingBottom: 13,
               position: "relative",
-              opacity: item.done ? 0.3 : status === "past" ? 0.35 : status === "future" ? 0.70 : 1,
+              opacity: item.done ? 0.45 : status === "past" ? 0.75 : status === "future" ? 0.90 : 1,
               transition: "opacity 0.4s ease",
               // Transform-only stagger entrance
               animation: `schedSlideIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) both`,
@@ -512,8 +512,8 @@ function ScheduleTimeline({
                 width: status === "now" ? 11 : 9,
                 height: status === "now" ? 11 : 9,
                 borderRadius: "50%",
-                background: status === "now" ? "#c89050" : "#3a2c18",
-                border: `1px solid ${status === "now" ? "#d4a060" : "#6a5030"}`,
+                background: status === "now" ? "#d9a760" : "#705a38",
+                border: `1px solid ${status === "now" ? "#f0c98d" : "#a18351"}`,
                 boxShadow: status === "now" ? "0 0 10px 4px #c8905050" : "none",
                 flexShrink: 0,
               }}
@@ -525,12 +525,12 @@ function ScheduleTimeline({
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontStyle: "italic",
                 fontWeight: 300,
-                fontSize: 15,
+                fontSize: 18,
                 letterSpacing: "0.06em",
-                color: "#c8a870",
+                color: "#ead3a3",
                 width: 56,
                 flexShrink: 0,
-                opacity: status === "now" ? 0.75 : 0.55,
+                opacity: status === "now" ? 0.95 : 0.82,
               }}
             >
               {item.time}
@@ -541,10 +541,10 @@ function ScheduleTimeline({
               style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontWeight: status === "now" ? 400 : 300,
-                fontSize: status === "now" ? 26 : status === "past" ? 20 : 23,
+                fontSize: status === "now" ? 29 : status === "past" ? 24 : 27,
                 letterSpacing: "0.01em",
                 lineHeight: 1.1,
-                color: status === "now" ? "#d4b080" : "#a89070",
+                color: status === "now" ? "#f4d4a0" : "#dfc49d",
                 flex: 1,
               }}
             >
@@ -1143,10 +1143,10 @@ export function HomePage() {
                   fontFamily: "'Cormorant Garamond', Georgia, serif",
                   fontWeight: 300,
                   fontStyle: "italic",
-                  fontSize: "1rem",
+                  fontSize: "1.25rem",
                   letterSpacing: "0.22em",
-                  color: "#c8a870",
-                  opacity: 0.45,
+                  color: "#ead3ad",
+                  opacity: 0.82,
                   margin: "0 0 8px 0",
                   textTransform: "lowercase",
                   // Slide in from side
